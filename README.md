@@ -74,7 +74,7 @@ O identificador da barbearia demo é `10000000-0000-4000-8000-000000000001`. O c
 
 ## Limites atuais
 
-Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais, cadastro e login são reais. A migração e o seed ainda não foram executados num projeto Supabase, pois as credenciais do projeto não foram fornecidas. O catálogo público e o formulário ainda usam `src/data/mock.ts`; o novo backend de disponibilidade e reservas precisa ser aplicado e conectado à interface. Pagamento e painel administrativo virão nas próximas etapas.
+Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais, cadastro e login são reais. A migração e o seed ainda não foram executados num projeto Supabase, pois as credenciais do projeto não foram fornecidas. O agendamento carrega catálogo e disponibilidade reais quando Supabase e Edge Function estão configurados; sem isso, fica identificado como demonstrativo. Pagamento e painel administrativo virão nas próximas etapas.
 
 Imagens do site são carregadas do Unsplash e precisam de internet.
 
@@ -82,7 +82,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 
 1. **Concluída:** estrutura, identidade, navegação e experiência pública responsiva.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
-3. **Backend escrito no código:** disponibilidade, bloqueios, reservas temporárias e prevenção transacional de conflitos. Aplicar e publicar no Supabase e conectar o formulário continuam pendentes.
+3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
 4. Integrar Mercado Pago por Edge Functions, validar webhooks e registrar idempotência e estados de pagamento.
 5. Construir painel administrativo, histórico, relatórios e testes das regras de domínio.
 6. Preparar implantação na Vercel e configuração por barbearia.
@@ -109,4 +109,5 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - O RPC `get_available_slots` considera serviços associados, profissionais públicos, jornada padrão ou individual, pausas, bloqueios, atendimentos existentes, duração, intervalo e fuso da barbearia.
 - A reserva é criada no servidor, vale pelo prazo `reservation_minutes` e valida o horário de novo. Uma restrição do PostgreSQL impede sobreposição mesmo em pedidos simultâneos.
 - Para haver horários, cadastre profissionais públicos em `barbershop_members`, associe-os em `barber_services` e configure `business_hours`. O seed atual não cria profissionais.
-- O formulário ainda segue demonstrativo até ser conectado às operações reais; esta versão não apresenta a reserva como concluída.
+- Com as credenciais, a migração, o catálogo e a Edge Function ativos, o formulário consulta a agenda e cria uma reserva temporária real. Sem esses pré-requisitos, ele permanece identificado como demonstrativo.
+- O pagamento ainda não está integrado; a tela informa que a reserva criada está pendente de pagamento.
