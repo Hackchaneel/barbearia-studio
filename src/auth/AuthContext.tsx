@@ -36,11 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase || !session?.user.id) { setMemberships([]); return }
     setMembershipsLoading(true)
     setMembershipsError(null)
-    const { data, error } = await supabase
-      .from('barbershop_members')
-      .select('id, barbershop_id, role, display_name')
-      .eq('user_id', session.user.id)
-      .eq('is_active', true)
+    const { data, error } = await supabase.rpc('get_my_barbershop_memberships')
     if (error) {
       setMembershipsError('Não foi possível consultar seu acesso. Confira se as migrações do Supabase foram aplicadas.')
       setMemberships([])
