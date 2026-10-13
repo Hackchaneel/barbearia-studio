@@ -2,16 +2,16 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { CalendarPlus, CheckCircle2, LoaderCircle, RefreshCw } from 'lucide-react'
 import type { ShopMembership } from './AuthContext'
 import { supabase } from '../lib/supabase'
+import { SHOP_TIME_ZONE } from '../lib/shopConfig'
 
 type ServiceOption = { id: string; name: string; duration_minutes: number; price_cents: number }
 type BarberOption = { id: string; display_name: string }
 type Slot = { barber_member_id: string; barber_name: string; starts_at: string; ends_at: string }
 
 function localDay(value: Date) {
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: SHOP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(value)
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}-${part('day')}`
 }
 
 function formatPrice(cents: number) {
@@ -141,7 +141,7 @@ export default function ManualAppointment({ membership, onCreated }: {
         {canChooseBarber && <label>Profissional<select required value={barberId} onChange={(event) => setBarberId(event.target.value)}>{barbers.map((barber) => <option key={barber.id} value={barber.id}>{barber.display_name}</option>)}</select></label>}
         <label>Data<input required type="date" min={localDay(new Date())} value={date} onChange={(event) => setDate(event.target.value)}/></label>
         <fieldset className="admin-manual-slots"><legend>Horário disponível</legend>
-          {loadingSlots ? <span className="admin-manual-hint"><LoaderCircle size={14} className="spin"/> Consultando agenda…</span> : slots.length ? <div className="admin-slot-grid">{slots.map((slot) => <button type="button" key={slot.starts_at} className={selectedSlot === slot.starts_at ? 'selected' : ''} onClick={() => setSelectedSlot(slot.starts_at)}>{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }).format(new Date(slot.starts_at))}</button>)}</div> : <span className="admin-manual-hint">Nenhum horário livre nesta data para este profissional e serviço.</span>}
+          {loadingSlots ? <span className="admin-manual-hint"><LoaderCircle size={14} className="spin"/> Consultando agenda…</span> : slots.length ? <div className="admin-slot-grid">{slots.map((slot) => <button type="button" key={slot.starts_at} className={selectedSlot === slot.starts_at ? 'selected' : ''} onClick={() => setSelectedSlot(slot.starts_at)}>{new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, hour: '2-digit', minute: '2-digit' }).format(new Date(slot.starts_at))}</button>)}</div> : <span className="admin-manual-hint">Nenhum horário livre nesta data para este profissional e serviço.</span>}
         </fieldset>
         <div className="admin-manual-customer"><label>Nome do cliente<input required minLength={2} maxLength={120} autoComplete="name" value={customerName} onChange={(event) => setCustomerName(event.target.value)}/></label><label>Telefone<input required type="tel" minLength={10} maxLength={20} autoComplete="tel" placeholder="(11) 99999-9999" value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)}/></label></div>
         <label>E-mail (opcional)<input type="email" maxLength={254} autoComplete="email" value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)}/></label>

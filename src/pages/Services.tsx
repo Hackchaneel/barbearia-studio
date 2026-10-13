@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom'
 import { services as demoServices, type Service } from '../data/mock'
 import { loadPublicServices } from '../lib/catalog'
 import { supabase } from '../lib/supabase'
+import { usePublicShop } from '../lib/publicShop'
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
 export default function Services() {
+  const { shop } = usePublicShop()
   const [items, setItems] = useState<Service[]>(supabase ? [] : demoServices)
   const [loading, setLoading] = useState(Boolean(supabase))
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +30,7 @@ export default function Services() {
   }, [])
 
   return <main id="conteudo" className="inner-page"><div className="container">
-    <div className="page-hero"><span className="eyebrow">SERVIÇOS NOIR</span><h1>O cuidado certo<br/><em>para cada estilo.</em></h1><p>Escolha seu ritual. A gente cuida do resto.</p></div>
+    <div className="page-hero"><span className="eyebrow">SERVIÇOS · {shop.name.toUpperCase()}</span><h1>O cuidado certo<br/><em>para cada estilo.</em></h1><p>Escolha seu ritual. A gente cuida do resto.</p></div>
     {error && <div className="admin-alert" role="alert">{error}</div>}
     {loading ? <div className="admin-loading">Carregando serviços…</div> : items.length === 0 ? <div className="admin-empty-inline">Nenhum serviço disponível no momento.</div> : <div className="service-list">{items.map((service, index) => {
       const Icon = service.icon ?? Scissors

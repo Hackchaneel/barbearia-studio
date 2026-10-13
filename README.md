@@ -10,6 +10,8 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `src/auth`: sessão, cadastro/login e proteção da área privada.
 - `src/auth/ServicesManager.tsx`: cadastro, edição e ativação de serviços para proprietários e gerentes.
 - `src/auth/TeamManager.tsx`: vínculo de profissionais, serviços atendidos e jornada semanal individual.
+- `src/auth/BarbershopSettings.tsx`: edição dos dados públicos, política de cancelamento e prazo de reserva da barbearia.
+- `src/lib/shopConfig.ts`: identificador e fuso horário da barbearia configuráveis por instalação.
 - `src/lib/supabase.ts`: cliente Supabase com chave publicável no navegador.
 - `supabase/migrations`: esquema PostgreSQL multiempresa e políticas RLS versionados.
 - `supabase/migrations/20261013050000_manage_appointment_status.sql`: transições autorizadas de status e histórico de atendimentos, executadas no banco.
@@ -53,7 +55,7 @@ A base da etapa 2 está incluída:
 ### Conectar um projeto Supabase
 
 1. Crie um projeto Supabase e copie a Project URL e a chave publicável (`sb_publishable_...`).
-2. Na raiz do projeto, copie `.env.example` para `.env.local` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`. Nunca coloque a secret/service-role key em variáveis `VITE_`.
+2. Na raiz do projeto, copie `.env.example` para `.env.local` e preencha `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_BARBERSHOP_ID` e `VITE_SHOP_TIME_ZONE`. Nunca coloque a secret/service-role key em variáveis `VITE_`.
 3. Aplique a migração ao projeto remoto com o Supabase CLI:
 
    ```bash
@@ -91,7 +93,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
 4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
 5. **Em andamento:** dashboard, agenda semanal, bloqueios, ações de cancelar/concluir atendimentos, gestão de serviços e equipe. Cadastro manual, histórico filtrável e relatórios com exportação CSV estão implementados; falta validação das regras de domínio.
-6. Preparar implantação na Vercel e configuração por barbearia.
+6. **Em andamento:** implantação na Vercel e configuração por barbearia. O identificador e o fuso podem ser definidos por instalação; os dados públicos e de contato são editáveis no painel.
 
 ## Dependências principais
 
@@ -144,4 +146,6 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - Agendamentos manuais usam o valor atual do serviço e ficam confirmados imediatamente. Pagamentos recebidos no local ainda não são lançados na tabela de pagamentos; os indicadores de recebimentos refletem apenas pagamentos aprovados pelo provedor online.
 - A aba **Histórico** permite filtrar por período e status; proprietários e gerentes também filtram por profissional e serviço e veem os pagamentos aprovados relacionados aos atendimentos no período.
 - A aba **Relatórios** resume agendamentos, atendimentos concluídos, cancelamentos e profissionais/serviços mais agendados. Proprietários e gerentes veem pagamentos aprovados; todos podem exportar CSV conforme suas permissões.
+- Proprietários e gerentes podem editar nome, descrição, endereço, telefone, e-mail, política de cancelamento e prazo de reserva em **Configurações**. O site público usa o nome, endereço, contato, descrição e horários cadastrados.
+- Para instalar a plataforma em outra barbearia, configure `VITE_BARBERSHOP_ID` com o UUID dela e `VITE_SHOP_TIME_ZONE` com o fuso IANA correspondente no `.env.local` e nas variáveis de build da Vercel.
 - O dashboard precisa das migrações de Supabase e de dados reais; o seed demo não cria membros nem agendamentos.

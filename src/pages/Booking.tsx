@@ -3,9 +3,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, Scissors, UserRound } from 'lucide-react'
 import { barbers as demoBarbers, services as demoServices } from '../data/mock'
 import { supabase, supabaseConfigured } from '../lib/supabase'
+import { BARBERSHOP_ID, SHOP_TIME_ZONE } from '../lib/shopConfig'
+import { usePublicShop } from '../lib/publicShop'
 
-const SHOP_ID = '10000000-0000-4000-8000-000000000001'
-const SHOP_TIME_ZONE = 'America/Sao_Paulo'
 const DEMO_TIMES = ['09:00', '09:45', '10:30', '11:15', '13:00', '14:30', '15:15', '16:45', '18:00']
 
 type BookingService = { id: string; name: string; description: string; priceCents: number; duration: number }
@@ -58,6 +58,7 @@ const DEMO_BARBERS: BookingBarber[] = demoBarbers.map((barber, index) => ({
 }))
 
 export default function Booking() {
+  const { shop } = usePublicShop()
   const [step, setStep] = useState(1)
   const [services, setServices] = useState<BookingService[]>(supabaseConfigured ? [] : DEMO_SERVICES)
   const [barbers, setBarbers] = useState<BookingBarber[]>(supabaseConfigured ? [] : DEMO_BARBERS)
@@ -94,18 +95,18 @@ export default function Booking() {
       const [serviceResult, barberResult, offeringResult] = await Promise.all([
         supabase!.from('services')
           .select('id, name, description, price_cents, duration_minutes, sort_order')
-          .eq('barbershop_id', SHOP_ID)
+          .eq('barbershop_id', BARBERSHOP_ID)
           .eq('is_active', true)
           .order('sort_order'),
         supabase!.from('barbershop_members')
           .select('id, display_name, bio, avatar_url')
-          .eq('barbershop_id', SHOP_ID)
+          .eq('barbershop_id', BARBERSHOP_ID)
           .eq('role', 'barber')
           .eq('is_active', true)
           .eq('is_public', true),
         supabase!.from('barber_services')
           .select('barber_member_id, service_id')
-          .eq('barbershop_id', SHOP_ID),
+          .eq('barbershop_id', BARBERSHOP_ID),
       ])
 
       if (!active) return
@@ -161,7 +162,7 @@ export default function Booking() {
     setTime('')
     async function loadSlots() {
       const { data, error } = await supabase!.rpc('get_available_slots', {
-        _barbershop_id: SHOP_ID,
+        _barbershop_id: BARBERSHOP_ID,
         _service_id: serviceId,
         _date: date,
         _barber_member_id: barberId === 'any' ? null : barberId,
@@ -209,7 +210,7 @@ export default function Booking() {
     setSubmitError(null)
     const { data, error } = await supabase.functions.invoke('create-appointment-hold', {
       body: {
-        barbershop_id: SHOP_ID,
+        barbershop_id: BARBERSHOP_ID,
         service_id: chosenService.id,
         barber_member_id: selectedSlot.barber_member_id,
         starts_at: selectedSlot.starts_at,
@@ -288,6 +289,6 @@ export default function Booking() {
         {submitError&&<div className="demo-notice" role="alert">{submitError}</div>}
       </section>}
       <div className="booking-controls">{step>1&&<button type="button" className="button button-outline" onClick={()=>setStep(step-1)}><ArrowLeft size={16}/> Voltar</button>}<button type="button" className="button button-gold" disabled={catalogLoading||submitting||(step===1&&!serviceId)||(step===2&&!barberId)||(step===3&&(!date||!time))||(step===4&&(!customerName.trim()||customerPhone.replace(/\D/g,'').length<10))} onClick={()=>void continueBooking()}>{submitting?'Reservando…':step===4?(isLive?'Reservar horário':'Revisar agendamento'):'Continuar'} <ArrowRight size={16}/></button></div>
-    </div><aside className="booking-summary"><span className="eyebrow">SEU RESUMO</span><h3>Noir Barbearia</h3><div className="summary-line"><span>Serviço</span><strong>{chosenService?.name||'Selecione um serviço'}</strong></div><div className="summary-line"><span>Profissional</span><strong>{chosenBarber||'A escolher'}</strong></div><div className="summary-line"><span>Data e horário</span><strong>{date?`${date} · ${time||'a escolher'}`:'A escolher'}</strong></div><div className="summary-total"><span>Total</span><strong>{chosenService?formatPrice(chosenService.priceCents):'—'}</strong></div><p><Clock3 size={14}/> Alterações e cancelamentos com até 4h de antecedência.</p></aside></div>
+    </div><aside className="booking-summary"><span className="eyebrow">SEU RESUMO</span><h3>{shop.name}</h3><div className="summary-line"><span>Serviço</span><strong>{chosenService?.name||'Selecione um serviço'}</strong></div><div className="summary-line"><span>Profissional</span><strong>{chosenBarber||'A escolher'}</strong></div><div className="summary-line"><span>Data e horário</span><strong>{date?`${date} · ${time||'a escolher'}`:'A escolher'}</strong></div><div className="summary-total"><span>Total</span><strong>{chosenService?formatPrice(chosenService.priceCents):'—'}</strong></div><p><Clock3 size={14}/> {shop.cancellation_policy || 'Consulte a política de cancelamento da barbearia.'}</p></aside></div>
   </div></main>
 }

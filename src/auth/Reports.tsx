@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, RefreshCw } from 'lucide-react'
 import type { ShopMembership } from './AuthContext'
 import { supabase } from '../lib/supabase'
+import { SHOP_TIME_ZONE, nextShopDay, shopDayStart } from '../lib/shopConfig'
 
 type Status = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'expired'
 type Appointment = {
@@ -26,12 +27,12 @@ const statusNames: Record<Status, string> = {
 }
 
 function dateValue(date: Date) {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: SHOP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
   return `${value('year')}-${value('month')}-${value('day')}`
 }
-function startOfDay(day: string) { return new Date(`${day}T00:00:00-03:00`).toISOString() }
-function endOfDay(day: string) { return new Date(new Date(`${day}T00:00:00-03:00`).getTime() + 86400000).toISOString() }
+function startOfDay(day: string) { return shopDayStart(day).toISOString() }
+function endOfDay(day: string) { return shopDayStart(nextShopDay(day)).toISOString() }
 function currency(cents: number) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100) }
 function safeCsv(value: string | number) {
   let text = String(value ?? '')
@@ -126,8 +127,8 @@ export default function Reports({ membership, canSeeFinancials }: {
     if (canSeeFinancials) headings.push('Valor do serviço', 'Pagamento aprovado')
     const lines = [headings, ...data.appointments.map((item) => {
       const line: Array<string | number> = [
-        new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(item.starts_at)),
-        new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }).format(new Date(item.starts_at)),
+        new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(item.starts_at)),
+        new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, hour: '2-digit', minute: '2-digit' }).format(new Date(item.starts_at)),
         item.customer_name, item.customer_phone, data.serviceNames[item.service_id] ?? 'Serviço',
         data.barberNames[item.barber_member_id] ?? 'Profissional', statusNames[item.status],
       ]

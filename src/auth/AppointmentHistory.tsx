@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { History, RefreshCw } from 'lucide-react'
 import type { ShopMembership } from './AuthContext'
 import { supabase } from '../lib/supabase'
+import { SHOP_TIME_ZONE, nextShopDay, shopDayStart } from '../lib/shopConfig'
 
 type Status = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'expired'
 type Appointment = {
@@ -23,16 +24,16 @@ const statusLabels: Record<Status, string> = {
 }
 
 function dayValue(date: Date) {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: SHOP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
   return `${value('year')}-${value('month')}-${value('day')}`
 }
 
-function dayStart(date: string) { return new Date(`${date}T00:00:00-03:00`).toISOString() }
-function dayAfter(date: string) { return new Date(new Date(`${date}T00:00:00-03:00`).getTime() + 86400000).toISOString() }
+function dayStart(date: string) { return shopDayStart(date).toISOString() }
+function dayAfter(date: string) { return shopDayStart(nextShopDay(date)).toISOString() }
 function money(cents: number) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100) }
-function dateLabel(value: string) { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)) }
-function timeLabel(value: string) { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }).format(new Date(value)) }
+function dateLabel(value: string) { return new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)) }
+function timeLabel(value: string) { return new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, hour: '2-digit', minute: '2-digit' }).format(new Date(value)) }
 
 export default function AppointmentHistory({ membership, canSeeFinancials }: {
   membership: ShopMembership

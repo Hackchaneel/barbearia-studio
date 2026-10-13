@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { ArrowUpRight, Instagram, Menu, X } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
+import { usePublicShop } from '../lib/publicShop'
 
 export function Brand() {
-  return <Link to="/" className="brand" aria-label="Noir, início"><span className="brand-mark">N<span>.</span></span><span className="brand-name">NOIR<small>BARBEARIA</small></span></Link>
+  const { shop } = usePublicShop()
+  const initials = shop.name.trim().slice(0, 1).toUpperCase() || 'N'
+  return <Link to="/" className="brand" aria-label={`${shop.name}, início`}><span className="brand-mark">{initials}<span>.</span></span><span className="brand-name">{shop.name.toUpperCase()}<small>BARBEARIA</small></span></Link>
 }
 
 export function Header() {
@@ -18,5 +21,6 @@ export function Header() {
 }
 
 export function Footer() {
-  return <footer className="site-footer"><div className="container footer-top"><div><Brand/><p>Seu tempo. Seu estilo.<br/>Um clássico, todos os dias.</p></div><div><span className="eyebrow">ENCONTRE A GENTE</span><p>Rua dos Pinheiros, 412<br/>Pinheiros · São Paulo, SP</p></div><div><span className="eyebrow">HORÁRIOS</span><p>Ter a sex · 9h às 20h<br/>Sáb · 9h às 18h</p></div><a className="social" href="https://instagram.com" aria-label="Instagram"><Instagram/></a></div><div className="container footer-bottom"><span>© 2025 Noir Barbearia. Todos os direitos reservados.</span><span>Feito para quem aprecia o ritual.</span></div></footer>
+  const { shop, hours, address } = usePublicShop()
+  return <footer className="site-footer"><div className="container footer-top"><div><Brand/><p>Seu tempo. Seu estilo.<br/>{shop.description || 'Um clássico, todos os dias.'}</p></div><div><span className="eyebrow">ENCONTRE A GENTE</span><p className="footer-address">{address || 'Endereço não cadastrado'}</p>{shop.phone && <a className="footer-contact" href={`tel:${shop.phone.replace(/[^+\d]/g, '')}`}>{shop.phone}</a>}{shop.email && <a className="footer-contact" href={`mailto:${shop.email}`}>{shop.email}</a>}</div><div><span className="eyebrow">HORÁRIOS</span>{hours.length ? hours.map((line) => <p className="footer-hours" key={line}>{line}</p>) : <p>Consulte os horários no agendamento.</p>}</div><a className="social" href="https://instagram.com" aria-label="Instagram"><Instagram/></a></div><div className="container footer-bottom"><span>© {new Date().getFullYear()} {shop.name}. Todos os direitos reservados.</span><span>Feito para quem aprecia o ritual.</span></div></footer>
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { CalendarDays, Clock3, LoaderCircle, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { SHOP_TIME_ZONE, shopLocalDateTime } from '../lib/shopConfig'
 
 type BarberOption = { id: string; display_name: string }
 type BlockedTime = {
@@ -13,7 +14,7 @@ type BlockedTime = {
 
 function todayInSaoPaulo() {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: SHOP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
   }).formatToParts(new Date())
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
   return `${part('year')}-${part('month')}-${part('day')}`
@@ -26,11 +27,11 @@ function nextDay(value: string) {
 }
 
 function localSaoPauloTime(date: string, time: string) {
-  return new Date(`${date}T${time}:00-03:00`).toISOString()
+  return shopLocalDateTime(date, time).toISOString()
 }
 
 function formatBlock(value: string, options: Intl.DateTimeFormatOptions) {
-  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', ...options }).format(new Date(value))
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, ...options }).format(new Date(value))
 }
 
 function isFullDay(block: BlockedTime) {
