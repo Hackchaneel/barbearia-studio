@@ -17,6 +17,7 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `supabase/migrations/20261013050000_manage_appointment_status.sql`: transições autorizadas de status e histórico de atendimentos, executadas no banco.
 - `supabase/migrations/20261013060000_manage_barbershop_team.sql`: operações seguras para vincular e editar profissionais e substituir suas associações de serviços.
 - `supabase/migrations/20261013070000_manual_appointments.sql`: criação transacional de agendamentos presenciais/por telefone, validando permissões e disponibilidade no banco.
+- `supabase/migrations/20261013090000_reschedule_appointment.sql`: reagendamento seguro de atendimentos futuros confirmados, revalidando disponibilidade e registrando a alteração no histórico.
 - `supabase/seed.sql`: dados fictícios para desenvolvimento.
 - `supabase/functions/create-appointment-hold`: endpoint da Edge Function para reservar horários temporariamente.
 - `supabase/functions/create-payment-checkout` e `supabase/functions/mercado-pago-webhook`: Checkout Pro e confirmação de pagamentos no servidor.
@@ -82,7 +83,7 @@ O identificador da barbearia demo é `10000000-0000-4000-8000-000000000001`. O c
 
 ## Limites atuais
 
-Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais e migrações aplicadas, o agendamento consulta disponibilidade real e abre o Checkout Pro. O painel já tem visão geral e agenda semanal somente para leitura; ações de edição, bloqueios, cadastros e relatórios detalhados ainda serão implementados.
+Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais e migrações aplicadas, o agendamento consulta disponibilidade real e abre o Checkout Pro. O painel possui visão geral, agenda e ações para cancelar, concluir ou reagendar atendimentos confirmados, além de gestão de bloqueios, cadastros e relatórios.
 
 Imagens do site são carregadas do Unsplash e precisam de internet.
 
@@ -138,6 +139,7 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - O painel permite alternar entre resumo e agenda dos próximos sete dias, além de atualizar os dados manualmente.
 - Proprietários e gerentes podem cadastrar e remover bloqueios por dia inteiro ou intervalo, para toda a equipe ou um barbeiro específico. Os horários são salvos em UTC com referência ao fuso de Brasília.
 - A equipe pode cancelar atendimentos futuros e marcar como concluídos apenas atendimentos confirmados cujo horário final já passou. As mudanças são autorizadas no banco e registradas em `appointment_events`.
+- A equipe pode alterar a data e a hora de atendimentos futuros confirmados na agenda. O banco verifica jornada, pausas, serviços, bloqueios e conflitos antes de salvar; qualquer conflito mantém o horário original e a alteração válida fica registrada em `appointment_events`.
 - Cancelar um atendimento pago não processa reembolso automaticamente; o estorno precisa ser feito no Mercado Pago.
 - Proprietários e gerentes podem criar, editar, ativar e desativar serviços. O site público e o fluxo de agendamento leem o catálogo ativo do Supabase quando conectado.
 - Proprietários e gerentes podem vincular uma conta Supabase com e-mail confirmado como barbeiro, editar o perfil, associar serviços e configurar a jornada individual. O profissional precisa criar a própria conta em `/entrar`; o painel não envia convite por e-mail.
