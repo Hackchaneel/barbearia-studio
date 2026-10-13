@@ -95,7 +95,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
 3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
 4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
-5. **Em andamento:** dashboard, agenda semanal, bloqueios, ações de cancelar/concluir atendimentos, gestão de serviços e equipe. Cadastro manual, histórico filtrável e relatórios com exportação CSV estão implementados; falta validação das regras de domínio.
+5. **Em andamento:** dashboard e operação da equipe, com agenda por dia/semana/mês, filtros de status e profissional, bloqueios, gestão de serviços/equipe, cadastro manual, histórico filtrável, financeiro e relatórios CSV. Ainda falta validação operacional com usuários reais.
 6. **Em andamento:** implantação na Vercel e configuração por barbearia. O identificador e o fuso podem ser definidos por instalação; os dados públicos e de contato são editáveis no painel.
 
 ## Dependências principais
@@ -139,7 +139,7 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 
 - Acesse `/painel` com uma conta autenticada vinculada à barbearia.
 - Proprietários e gerentes veem agenda, pagamentos pendentes e recebimentos aprovados do dia. Barbeiros veem somente seus próprios atendimentos, conforme RLS.
-- O painel permite alternar entre resumo e agenda dos próximos sete dias, além de atualizar os dados manualmente.
+- A agenda alterna entre dia, semana e mês, com filtros de status e profissional; cada barbeiro consulta apenas os próprios atendimentos. A atualização busca os dados do período diretamente no Supabase.
 - Proprietários e gerentes podem cadastrar e remover bloqueios por dia inteiro ou intervalo, para toda a equipe ou um barbeiro específico. Os horários são salvos em UTC com referência ao fuso de Brasília.
 - A equipe pode cancelar atendimentos futuros e marcar como concluídos apenas atendimentos confirmados cujo horário final já passou. As mudanças são autorizadas no banco e registradas em `appointment_events`.
 - A equipe pode alterar a data e a hora de atendimentos futuros confirmados na agenda. O banco verifica jornada, pausas, serviços, bloqueios e conflitos antes de salvar; qualquer conflito mantém o horário original e a alteração válida fica registrada em `appointment_events`.
