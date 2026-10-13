@@ -90,7 +90,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
 3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
 4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
-5. **Em andamento:** dashboard, agenda semanal, bloqueios, ações de cancelar/concluir atendimentos, gestão de serviços e equipe. Cadastro manual de agendamentos está implementado; faltam histórico detalhado, relatórios e validação das regras de domínio.
+5. **Em andamento:** dashboard, agenda semanal, bloqueios, ações de cancelar/concluir atendimentos, gestão de serviços e equipe. Cadastro manual e histórico filtrável estão implementados; faltam relatórios avançados e validação das regras de domínio.
 6. Preparar implantação na Vercel e configuração por barbearia.
 
 ## Dependências principais
@@ -142,4 +142,5 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - Profissionais ativos e públicos aparecem na página inicial e no agendamento. Para haver horários, configure serviços e jornada semanal.
 - Proprietários, gerentes e barbeiros podem criar agendamentos presenciais ou recebidos por telefone em **Novo agendamento** no painel. O sistema confirma o horário escolhido e grava os dados do cliente e observações.
 - Agendamentos manuais usam o valor atual do serviço e ficam confirmados imediatamente. Pagamentos recebidos no local ainda não são lançados na tabela de pagamentos; os indicadores de recebimentos refletem apenas pagamentos aprovados pelo provedor online.
+- A aba **Histórico** permite filtrar por período e status; proprietários e gerentes também filtram por profissional e serviço e veem os pagamentos aprovados relacionados aos atendimentos no período.
 - O dashboard precisa das migrações de Supabase e de dados reais; o seed demo não cria membros nem agendamentos.
