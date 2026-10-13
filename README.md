@@ -11,6 +11,7 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `src/lib/supabase.ts`: cliente Supabase com chave publicável no navegador.
 - `supabase/migrations`: esquema PostgreSQL multiempresa e políticas RLS versionados.
 - `supabase/seed.sql`: dados fictícios para desenvolvimento.
+- `supabase/functions/create-appointment-hold`: endpoint da Edge Function para reservar horários temporariamente.
 - `src/styles.css`: identidade visual responsiva. Textos, cores e serviços podem ser personalizados.
 
 ## Requisitos e execução
@@ -73,7 +74,7 @@ O identificador da barbearia demo é `10000000-0000-4000-8000-000000000001`. O c
 
 ## Limites atuais
 
-Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais, cadastro e login são reais. A migração e o seed ainda não foram executados num projeto Supabase, pois as credenciais do projeto não foram fornecidas. O catálogo público ainda usa `src/data/mock.ts`; reservas públicas, Edge Functions, pagamento e painel administrativo virão nas próximas etapas.
+Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais, cadastro e login são reais. A migração e o seed ainda não foram executados num projeto Supabase, pois as credenciais do projeto não foram fornecidas. O catálogo público e o formulário ainda usam `src/data/mock.ts`; o novo backend de disponibilidade e reservas precisa ser aplicado e conectado à interface. Pagamento e painel administrativo virão nas próximas etapas.
 
 Imagens do site são carregadas do Unsplash e precisam de internet.
 
@@ -81,7 +82,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 
 1. **Concluída:** estrutura, identidade, navegação e experiência pública responsiva.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
-3. Implementar disponibilidade no servidor, bloqueios, reservas temporárias e prevenção transacional de conflitos.
+3. **Backend escrito no código:** disponibilidade, bloqueios, reservas temporárias e prevenção transacional de conflitos. Aplicar e publicar no Supabase e conectar o formulário continuam pendentes.
 4. Integrar Mercado Pago por Edge Functions, validar webhooks e registrar idempotência e estados de pagamento.
 5. Construir painel administrativo, histórico, relatórios e testes das regras de domínio.
 6. Preparar implantação na Vercel e configuração por barbearia.
@@ -99,3 +100,13 @@ O projeto já está preparado para implantação na Vercel, incluindo fallback d
 3. Clique em Deploy. A Vercel publica uma URL para o site.
 
 Depois disso, cada `git push` na branch principal dispara um novo build e publicação. Você não precisa rodar `npm run dev` para ver a versão online; use esse comando apenas quando quiser uma prévia local durante o desenvolvimento. Quando conectar o Supabase, cadastre também `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` nas variáveis de ambiente do projeto Vercel.
+
+### Reservas e disponibilidade (Etapa 3)
+
+- Aplique as migrações no Supabase com `npx supabase db push`.
+- Publique o endpoint com `npx supabase functions deploy create-appointment-hold`.
+- A Edge Function usa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` do ambiente gerenciado pelo Supabase. A chave privada não deve ser adicionada ao Vite nem à Vercel.
+- O RPC `get_available_slots` considera serviços associados, profissionais públicos, jornada padrão ou individual, pausas, bloqueios, atendimentos existentes, duração, intervalo e fuso da barbearia.
+- A reserva é criada no servidor, vale pelo prazo `reservation_minutes` e valida o horário de novo. Uma restrição do PostgreSQL impede sobreposição mesmo em pedidos simultâneos.
+- Para haver horários, cadastre profissionais públicos em `barbershop_members`, associe-os em `barber_services` e configure `business_hours`. O seed atual não cria profissionais.
+- O formulário ainda segue demonstrativo até ser conectado às operações reais; esta versão não apresenta a reserva como concluída.

@@ -3,3 +3,6 @@ project_id = "barbearia-studio"
 [db.seed]
 enabled = true
 sql_paths = ["./seed.sql"]
+
+[functions.create-appointment-hold]
+verify_jwt = false
