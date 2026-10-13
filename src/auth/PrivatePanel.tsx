@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, Link } from 'react-router-dom'
-import { Activity, CalendarDays, ChevronDown, Clock3, LogOut, RefreshCw, Scissors, Users, Wallet, Ban } from 'lucide-react'
+import { Activity, CalendarDays, ChevronDown, Clock3, LogOut, RefreshCw, Scissors, Users, Wallet, Ban, CheckCircle2, XCircle } from 'lucide-react'
 import { useAuth, type ShopMembership } from './AuthContext'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import BlockedTimes from './BlockedTimes'
@@ -71,6 +71,7 @@ export default function PrivatePanel() {
   const [view, setView] = useState<PanelView>('dashboard')
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(false)
+  const [updatingAppointmentId, setUpdatingAppointmentId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const membership = memberships.find((item) => item.id === selectedMembershipId) ?? memberships[0]
   const canSeeFinancials = membership?.role === 'owner' || membership?.role === 'manager'
@@ -176,6 +177,25 @@ export default function PrivatePanel() {
     setLoading(false)
   }, [membership, canSeeFinancials])
 
+  const updateAppointmentStatus = useCallback(async (appointment: Appointment, status: 'cancelled' | 'completed') => {
+    if (!supabase) return
+    if (status === 'cancelled' && !window.confirm('Cancelar este agendamento? Se já foi pago, o reembolso não será processado automaticamente.')) return
+    setUpdatingAppointmentId(appointment.id)
+    setError(null)
+    const { error: updateError } = await supabase.rpc('update_appointment_status', {
+      _appointment_id: appointment.id,
+      _new_status: status,
+    })
+    if (updateError) {
+      setError(status === 'completed'
+        ? 'Não foi possível concluir o atendimento. Só é possível concluir um agendamento confirmado depois do horário final.'
+        : 'Não foi possível cancelar o atendimento. Atualize a agenda e tente novamente.')
+    } else {
+      await loadDashboard()
+    }
+    setUpdatingAppointmentId(null)
+  }, [loadDashboard])
+
   useEffect(() => {
     if (membership) void loadDashboard()
   }, [membership, loadDashboard])
@@ -229,10 +249,10 @@ export default function PrivatePanel() {
           <article><span>Cancelamentos hoje</span><strong>{cancelledToday}</strong><small><Activity size={14}/> atendimentos cancelados</small></article>
         </section>
         <section className="admin-card"><div className="admin-card-heading"><div><span className="eyebrow">AGENDA</span><h2>Próximos atendimentos</h2></div><button type="button" className="admin-text-button" onClick={() => setView('agenda')}>Ver semana <ArrowRightIcon/></button></div>
-          {upcoming.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento próximo para esta semana.</div> : <div className="admin-appointment-list">{upcoming.map((item) => <AppointmentRow key={item.id} appointment={item} data={data}/>)}</div>}
+          {upcoming.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento próximo para esta semana.</div> : <div className="admin-appointment-list">{upcoming.map((item) => <AppointmentRow key={item.id} appointment={item} data={data} onStatusChange={updateAppointmentStatus} busy={updatingAppointmentId === item.id}/>)}</div>}
         </section>
       </> : view === 'agenda' ? <section className="admin-card admin-agenda-card"><div className="admin-card-heading"><div><span className="eyebrow">PRÓXIMOS 7 DIAS</span><h2>Atendimentos da semana</h2></div><span className="admin-count">{appointments.length} registros</span></div>
-        {agendaGroups.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento encontrado neste período.</div> : agendaGroups.map(([day, items]) => <div className="admin-day-group" key={day}><h3>{formatDate(`${day}T12:00:00-03:00`, { weekday: 'long', day: 'numeric', month: 'long' })}</h3><div className="admin-appointment-list">{items.map((item) => <AppointmentRow key={item.id} appointment={item} data={data}/>)}</div></div>)}
+        {agendaGroups.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento encontrado neste período.</div> : agendaGroups.map(([day, items]) => <div className="admin-day-group" key={day}><h3>{formatDate(`${day}T12:00:00-03:00`, { weekday: 'long', day: 'numeric', month: 'long' })}</h3><div className="admin-appointment-list">{items.map((item) => <AppointmentRow key={item.id} appointment={item} data={data} onStatusChange={updateAppointmentStatus} busy={updatingAppointmentId === item.id}/>)}</div></div>)}
       </section> : canManageBlocks ? <BlockedTimes barbershopId={membership!.barbershop_id}/> : null}
       <footer className="admin-footnote">Os dados exibidos vêm do Supabase e respeitam as permissões da sua função nesta barbearia.</footer>
     </section>
@@ -243,12 +263,23 @@ function ArrowRightIcon() {
   return <span aria-hidden="true">→</span>
 }
 
-function AppointmentRow({ appointment, data }: { appointment: Appointment; data: DashboardData }) {
+function AppointmentRow({ appointment, data, onStatusChange, busy }: {
+  appointment: Appointment
+  data: DashboardData
+  onStatusChange: (appointment: Appointment, status: 'cancelled' | 'completed') => void
+  busy: boolean
+}) {
+  const canCancel = (appointment.status === 'pending' || appointment.status === 'confirmed') && new Date(appointment.starts_at).getTime() > Date.now()
+  const canComplete = appointment.status === 'confirmed' && new Date(appointment.ends_at).getTime() <= Date.now()
   return <article className="admin-appointment-row">
     <div className="admin-appointment-time"><strong>{formatTime(appointment.starts_at)}</strong><small>{formatDate(appointment.starts_at)}</small></div>
     <div className="admin-appointment-main"><strong>{appointment.customer_name}</strong><small>{data.services[appointment.service_id] ?? 'Serviço'} · {data.barbers[appointment.barber_member_id] ?? 'Profissional'}</small></div>
     <div className="admin-appointment-contact">{appointment.customer_phone}</div>
     <div className="admin-appointment-price">{money(appointment.amount_cents)}</div>
-    <span className={`admin-status status-${appointment.status}`}>{statusName[appointment.status]}</span>
+    <div className="admin-appointment-state"><span className={`admin-status status-${appointment.status}`}>{statusName[appointment.status]}</span><div className="admin-appointment-actions">
+      {canComplete && <button type="button" onClick={() => onStatusChange(appointment, 'completed')} disabled={busy} title="Marcar como concluído"><CheckCircle2 size={13}/> Concluir</button>}
+      {canCancel && <button type="button" onClick={() => onStatusChange(appointment, 'cancelled')} disabled={busy} title="Cancelar agendamento"><XCircle size={13}/> Cancelar</button>}
+      {busy && <small>Salvando…</small>}
+    </div></div>
   </article>
 }

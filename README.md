@@ -10,6 +10,7 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `src/auth`: sessão, cadastro/login e proteção da área privada.
 - `src/lib/supabase.ts`: cliente Supabase com chave publicável no navegador.
 - `supabase/migrations`: esquema PostgreSQL multiempresa e políticas RLS versionados.
+- `supabase/migrations/20261013050000_manage_appointment_status.sql`: transições autorizadas de status e histórico de atendimentos, executadas no banco.
 - `supabase/seed.sql`: dados fictícios para desenvolvimento.
 - `supabase/functions/create-appointment-hold`: endpoint da Edge Function para reservar horários temporariamente.
 - `supabase/functions/create-payment-checkout` e `supabase/functions/mercado-pago-webhook`: Checkout Pro e confirmação de pagamentos no servidor.
@@ -85,7 +86,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
 3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
 4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
-5. **Em andamento:** dashboard, agenda semanal e bloqueios de disponibilidade para proprietários e gerentes. Faltam ações sobre atendimentos, cadastros, histórico detalhado, relatórios e testes das regras de domínio.
+5. **Em andamento:** dashboard, agenda semanal, bloqueios e ações de cancelar/concluir atendimentos. Faltam cadastro manual, cadastros de equipe/serviços, histórico detalhado, relatórios e testes das regras de domínio.
 6. Preparar implantação na Vercel e configuração por barbearia.
 
 ## Dependências principais
@@ -130,5 +131,7 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - Proprietários e gerentes veem agenda, pagamentos pendentes e recebimentos aprovados do dia. Barbeiros veem somente seus próprios atendimentos, conforme RLS.
 - O painel permite alternar entre resumo e agenda dos próximos sete dias, além de atualizar os dados manualmente.
 - Proprietários e gerentes podem cadastrar e remover bloqueios por dia inteiro ou intervalo, para toda a equipe ou um barbeiro específico. Os horários são salvos em UTC com referência ao fuso de Brasília.
-- A agenda de atendimentos continua somente para leitura. Alterar status, cancelar, criar atendimentos e editar cadastros ainda não estão disponíveis.
+- A equipe pode cancelar atendimentos futuros e marcar como concluídos apenas atendimentos confirmados cujo horário final já passou. As mudanças são autorizadas no banco e registradas em `appointment_events`.
+- Cancelar um atendimento pago não processa reembolso automaticamente; o estorno precisa ser feito no Mercado Pago.
+- Criar atendimentos manualmente e editar cadastros ainda não estão disponíveis.
 - O dashboard precisa das migrações de Supabase e de dados reais; o seed demo não cria membros nem agendamentos.
