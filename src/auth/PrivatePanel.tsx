@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, Link } from 'react-router-dom'
-import { Activity, CalendarDays, ChevronDown, Clock3, LogOut, RefreshCw, Scissors, Users, Wallet } from 'lucide-react'
+import { Activity, CalendarDays, ChevronDown, Clock3, LogOut, RefreshCw, Scissors, Users, Wallet, Ban } from 'lucide-react'
 import { useAuth, type ShopMembership } from './AuthContext'
 import { supabase, supabaseConfigured } from '../lib/supabase'
+import BlockedTimes from './BlockedTimes'
 
-type PanelView = 'dashboard' | 'agenda'
+type PanelView = 'dashboard' | 'agenda' | 'blocks'
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'expired'
 type Appointment = {
   id: string
@@ -73,6 +74,7 @@ export default function PrivatePanel() {
   const [error, setError] = useState<string | null>(null)
   const membership = memberships.find((item) => item.id === selectedMembershipId) ?? memberships[0]
   const canSeeFinancials = membership?.role === 'owner' || membership?.role === 'manager'
+  const canManageBlocks = canSeeFinancials
   const shopName = data?.shopName || 'Barbearia'
 
   useEffect(() => {
@@ -208,6 +210,7 @@ export default function PrivatePanel() {
       <nav className="admin-nav" aria-label="Menu do painel">
         <button type="button" className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}><Activity size={17}/> Visão geral</button>
         <button type="button" className={view === 'agenda' ? 'active' : ''} onClick={() => setView('agenda')}><CalendarDays size={17}/> Agenda</button>
+        {canManageBlocks && <button type="button" className={view === 'blocks' ? 'active' : ''} onClick={() => setView('blocks')}><Ban size={17}/> Bloqueios</button>}
         <div className="admin-nav-caption">GESTÃO</div>
         <span className="admin-nav-disabled"><Scissors size={17}/> Serviços <small>em breve</small></span>
         <span className="admin-nav-disabled"><Users size={17}/> Equipe <small>em breve</small></span>
@@ -216,7 +219,7 @@ export default function PrivatePanel() {
     </aside>
 
     <section className="admin-content">
-      <header className="admin-topbar"><div><span className="eyebrow">{formatDate(new Date().toISOString(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><h1>{view === 'dashboard' ? 'Visão geral' : 'Agenda'}</h1></div><button type="button" className="admin-refresh" onClick={() => void loadDashboard()} disabled={loading}><RefreshCw size={15} className={loading ? 'spin' : ''}/> Atualizar</button></header>
+      <header className="admin-topbar"><div><span className="eyebrow">{formatDate(new Date().toISOString(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span><h1>{view === 'dashboard' ? 'Visão geral' : view === 'agenda' ? 'Agenda' : 'Bloqueios'}</h1></div>{view !== 'blocks' && <button type="button" className="admin-refresh" onClick={() => void loadDashboard()} disabled={loading}><RefreshCw size={15} className={loading ? 'spin' : ''}/> Atualizar</button>}</header>
       {error && <div className="admin-alert" role="alert">{error}</div>}
       {loading && !data ? <div className="admin-loading">Carregando dados da barbearia…</div> : !data ? <div className="admin-empty"><CalendarDays/><h2>Sem dados do painel</h2><p>Confira a configuração do Supabase e tente atualizar.</p></div> : view === 'dashboard' ? <>
         <section className="admin-kpis" aria-label="Indicadores de hoje">
@@ -228,9 +231,9 @@ export default function PrivatePanel() {
         <section className="admin-card"><div className="admin-card-heading"><div><span className="eyebrow">AGENDA</span><h2>Próximos atendimentos</h2></div><button type="button" className="admin-text-button" onClick={() => setView('agenda')}>Ver semana <ArrowRightIcon/></button></div>
           {upcoming.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento próximo para esta semana.</div> : <div className="admin-appointment-list">{upcoming.map((item) => <AppointmentRow key={item.id} appointment={item} data={data}/>)}</div>}
         </section>
-      </> : <section className="admin-card admin-agenda-card"><div className="admin-card-heading"><div><span className="eyebrow">PRÓXIMOS 7 DIAS</span><h2>Atendimentos da semana</h2></div><span className="admin-count">{appointments.length} registros</span></div>
+      </> : view === 'agenda' ? <section className="admin-card admin-agenda-card"><div className="admin-card-heading"><div><span className="eyebrow">PRÓXIMOS 7 DIAS</span><h2>Atendimentos da semana</h2></div><span className="admin-count">{appointments.length} registros</span></div>
         {agendaGroups.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento encontrado neste período.</div> : agendaGroups.map(([day, items]) => <div className="admin-day-group" key={day}><h3>{formatDate(`${day}T12:00:00-03:00`, { weekday: 'long', day: 'numeric', month: 'long' })}</h3><div className="admin-appointment-list">{items.map((item) => <AppointmentRow key={item.id} appointment={item} data={data}/>)}</div></div>)}
-      </section>}
+      </section> : canManageBlocks ? <BlockedTimes barbershopId={membership!.barbershop_id}/> : null}
       <footer className="admin-footnote">Os dados exibidos vêm do Supabase e respeitam as permissões da sua função nesta barbearia.</footer>
     </section>
   </main>
