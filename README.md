@@ -1,12 +1,12 @@
 # Noir — Barbearia contemporânea
 
-Plataforma comercial reutilizável para barbearias. A experiência pública da Etapa 1 e a base de dados e autenticação da Etapa 2 estão implementadas.
+Plataforma multiempresa para barbearias, com site público, reservas, autenticação e painel operacional. O código está publicado na Vercel; as migrations e Edge Functions estão aplicadas ao projeto Supabase conectado. A ativação de pagamentos reais ainda depende das credenciais do Mercado Pago.
 
 ## Arquitetura
 
-- `src/pages`: páginas públicas e fluxo demonstrativo de agendamento.
+- `src/pages`: páginas públicas, reserva online e consulta de agendamentos.
 - `src/components`: cabeçalho, marca e rodapé compartilhados.
-- `src/data/mock.ts`: catálogo demonstrativo usado quando o Supabase não está configurado; profissionais ainda aguardam a gestão da equipe.
+- `src/data/mock.ts`: catálogo de demonstração usado apenas quando o Supabase não está configurado.
 - `src/auth`: sessão, cadastro/login e proteção da área privada.
 - `src/auth/ServicesManager.tsx`: cadastro, edição e ativação de serviços para proprietários e gerentes.
 - `src/auth/TeamManager.tsx`: vínculo de profissionais, serviços atendidos e jornada semanal individual.
@@ -53,7 +53,7 @@ A base da etapa 2 está incluída:
 - `supabase/migrations/20261013010000_initial_multi_tenant_schema.sql`: modelo multiempresa, relacionamentos, índices, estados de agendamento/pagamento, restrição contra horários sobrepostos, criação de perfil após cadastro e políticas RLS.
 - `supabase/seed.sql`: catálogo Noir fictício e horários. Não cria usuários, profissionais, agendamentos nem pagamentos.
 - `/entrar`: cadastro e login por Supabase Auth quando há credenciais configuradas.
-- `/painel`: verifica sessão e vínculo ativo de equipe; o painel operacional completo será construído numa etapa posterior.
+- `/painel`: verifica sessão e vínculo ativo de equipe e oferece agenda, clientes, histórico, serviços, equipe, financeiro, relatórios e configurações conforme a função.
 
 ### Conectar um projeto Supabase
 
@@ -83,20 +83,24 @@ A base da etapa 2 está incluída:
 
 O identificador da barbearia demo é `10000000-0000-4000-8000-000000000001`. O catálogo e horários públicos são somente leitura; dados de perfil são restritos ao usuário; operações de equipe verificam o vínculo à barbearia. A tabela pública de equipe não expõe o UUID do usuário.
 
-## Limites atuais
+## Estado da publicação
 
-Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais e migrações aplicadas, o agendamento consulta disponibilidade real e abre o Checkout Pro. O painel possui visão geral, agenda e ações para cancelar, concluir ou reagendar atendimentos confirmados, além de gestão de bloqueios, cadastros e relatórios.
+- Site: `https://barbearia-studio.vercel.app`; páginas principais e rota `/painel` respondem na publicação.
+- Banco: as 11 migrations deste repositório estão aplicadas ao projeto Supabase conectado.
+- Edge Functions: `create-appointment-hold`, `create-payment-checkout` e `mercado-pago-webhook` estão publicadas.
+- Configuração pendente para pagamento online real: cadastrar `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_WEBHOOK_SECRET` em **Supabase → Edge Functions → Secrets**, configurar o webhook no Mercado Pago e validar com credenciais de teste. `PUBLIC_SITE_URL` já aponta para o domínio publicado.
+- Não coloque segredos do Mercado Pago no código, em variáveis `VITE_` ou em mensagens. Para usar a barbearia, também é preciso manter serviços, profissionais públicos e jornadas configurados no banco.
 
 Imagens do site são carregadas do Unsplash e precisam de internet.
 
 ## Roteiro do produto
 
 1. **Concluída:** estrutura, identidade, navegação e experiência pública responsiva.
-2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
-3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
-4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
-5. **Em andamento:** dashboard e operação da equipe, com agenda por dia/semana/mês, filtros de status e profissional, bloqueios, gestão de serviços/equipe, cadastro manual, histórico filtrável, financeiro e relatórios CSV. Ainda falta validação operacional com usuários reais.
-6. **Em andamento:** implantação na Vercel e configuração por barbearia. O identificador e o fuso podem ser definidos por instalação; os dados públicos e de contato são editáveis no painel.
+2. **Concluída nesta instalação:** esquema multiempresa, 11 migrations aplicadas, RLS e autenticação.
+3. **Concluída nesta instalação:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e função de criação de reserva publicada. A barbearia precisa manter profissionais, serviços e jornadas cadastrados.
+4. **Código e funções publicados:** Checkout Pro e webhook estão no Supabase. Falta configurar as credenciais privadas do Mercado Pago e validar compra de ponta a ponta.
+5. **Implementada:** painel da equipe com agenda por dia/semana/mês, filtros, bloqueios, gestão de serviços/equipe, cadastro manual, histórico, financeiro e relatórios CSV.
+6. **Concluída nesta instalação:** Vercel e Supabase conectados. A personalização para outra barbearia exige configurar o identificador, fuso, domínio e dados operacionais dela.
 
 ## Dependências principais
 
