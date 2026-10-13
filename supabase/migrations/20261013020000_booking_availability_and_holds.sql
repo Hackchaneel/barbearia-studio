@@ -7,8 +7,30 @@ alter table public.appointments
     check (buffer_minutes between 0 and 240);
 
 alter table public.appointments
-  add column slot_ends_at timestamptz
-    generated always as (ends_at + make_interval(mins => buffer_minutes)) stored;
+  add column slot_ends_at timestamptz;
+
+-- timestamptz + interval is not immutable in PostgreSQL, so this value must
+-- be maintained by a trigger instead of a generated column.
+create or replace function public.set_appointment_slot_ends_at()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.slot_ends_at := new.ends_at + make_interval(secs => new.buffer_minutes * 60);
+  return new;
+end;
+$$;
+
+create trigger set_appointment_slot_ends_at
+  before insert or update on public.appointments
+  for each row execute function public.set_appointment_slot_ends_at();
+
+update public.appointments
+set slot_ends_at = ends_at + make_interval(secs => buffer_minutes * 60);
+
+alter table public.appointments
+  alter column slot_ends_at set not null;
 
 alter table public.appointments
   drop constraint appointments_no_active_overlap;
@@ -91,11 +113,11 @@ as $$
     ) as slot(local_start)
     where (_barber_member_id is null or member.id = _barber_member_id)
   )
-  select candidate.member_id,
-         candidate.display_name,
-         candidate.local_start at time zone candidate.timezone,
+  select candidate.member_id as barber_member_id,
+         candidate.display_name as barber_name,
+         candidate.local_start at time zone candidate.timezone as starts_at,
          (candidate.local_start + make_interval(mins => candidate.duration_minutes))
-           at time zone candidate.timezone
+           at time zone candidate.timezone as ends_at
   from candidates as candidate
   where (candidate.break_starts_at is null or candidate.break_ends_at is null
       or candidate.local_start >= _date::timestamp + candidate.break_ends_at
