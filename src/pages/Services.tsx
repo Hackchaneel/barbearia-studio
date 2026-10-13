@@ -1,0 +1,5 @@
+import { ArrowUpRight, Check, Clock3 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { services } from '../data/mock'
+export default function Services() { return <main id="conteudo" className="inner-page"><div className="container"><div className="page-hero"><span className="eyebrow">SERVIÇOS NOIR</span><h1>O cuidado certo<br/><em>para cada estilo.</em></h1><p>Escolha seu ritual. A gente cuida do resto.</p></div><div className="service-list">{services.map((s, i) => <article className="service-row" key={s.id}><span className="service-number">0{i+1}</span><div className="service-row-icon"><s.icon/></div><div className="service-row-main"><h2>{s.name}</h2><p>{s.description}</p><span><Clock3 size={14}/>{s.duration} minutos</span></div><strong>R$ {s.price}</strong><Link className="button button-outline" to="/agendar">Agendar <ArrowUpRight size={16}/></Link></article>)}</div><div className="note-box"><Check size={17}/><span>Todos os serviços incluem uma consulta rápida para entender o que combina com você.</span></div></div></main> }
+
