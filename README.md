@@ -75,7 +75,7 @@ O identificador da barbearia demo é `10000000-0000-4000-8000-000000000001`. O c
 
 ## Limites atuais
 
-Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais, cadastro e login são reais. As migrações ainda precisam ser aplicadas ao projeto Supabase. O agendamento consulta disponibilidade real quando o Supabase está configurado; o checkout requer também credenciais do Mercado Pago. Sem esses pré-requisitos, o site não simula pagamentos aprovados. O painel administrativo virá numa etapa posterior.
+Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais e migrações aplicadas, o agendamento consulta disponibilidade real e abre o Checkout Pro. O painel já tem visão geral e agenda semanal somente para leitura; ações de edição, bloqueios, cadastros e relatórios detalhados ainda serão implementados.
 
 Imagens do site são carregadas do Unsplash e precisam de internet.
 
@@ -85,7 +85,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
 3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
 4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
-5. Construir painel administrativo, histórico, relatórios e testes das regras de domínio.
+5. **Primeira parte implementada:** dashboard com indicadores permitidos por função e agenda semanal somente para leitura. Faltam ações de gestão, bloqueios, cadastros, histórico detalhado, relatórios e testes das regras de domínio.
 6. Preparar implantação na Vercel e configuração por barbearia.
 
 ## Dependências principais
@@ -123,3 +123,11 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - Publique com `npx supabase functions deploy create-payment-checkout` e `npx supabase functions deploy mercado-pago-webhook`. Configure a URL de webhook no painel do Mercado Pago para `https://SEU_PROJECT_REF.supabase.co/functions/v1/mercado-pago-webhook` e habilite eventos de pagamento.
 - Configure as URLs de retorno para o domínio do site usado em `PUBLIC_SITE_URL`. Nunca salve o Access Token ou o segredo do webhook em variáveis `VITE_` ou no Git.
 - Se um pagamento for aprovado depois que a reserva expirou, o sistema registra `payment_approved_after_hold` e não confirma um horário que pode ter sido ocupado; esse caso exige revisão operacional.
+
+### Painel administrativo (Etapa 5, primeira parte)
+
+- Acesse `/painel` com uma conta autenticada vinculada à barbearia.
+- Proprietários e gerentes veem agenda, pagamentos pendentes e recebimentos aprovados do dia. Barbeiros veem somente seus próprios atendimentos, conforme RLS.
+- O painel permite alternar entre resumo e agenda dos próximos sete dias, além de atualizar os dados manualmente.
+- A agenda é somente para leitura nesta etapa. Alterar status, cancelar, criar atendimentos, bloquear horários e editar cadastros ainda não estão disponíveis.
+- O dashboard precisa das migrações de Supabase e de dados reais; o seed demo não cria membros nem agendamentos.
