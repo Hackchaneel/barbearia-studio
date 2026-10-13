@@ -6,3 +6,9 @@ sql_paths = ["./seed.sql"]
 
 [functions.create-appointment-hold]
 verify_jwt = false
+
+[functions.create-payment-checkout]
+verify_jwt = false
+
+[functions.mercado-pago-webhook]
+verify_jwt = false

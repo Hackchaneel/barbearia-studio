@@ -12,6 +12,7 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `supabase/migrations`: esquema PostgreSQL multiempresa e políticas RLS versionados.
 - `supabase/seed.sql`: dados fictícios para desenvolvimento.
 - `supabase/functions/create-appointment-hold`: endpoint da Edge Function para reservar horários temporariamente.
+- `supabase/functions/create-payment-checkout` e `supabase/functions/mercado-pago-webhook`: Checkout Pro e confirmação de pagamentos no servidor.
 - `src/styles.css`: identidade visual responsiva. Textos, cores e serviços podem ser personalizados.
 
 ## Requisitos e execução
@@ -74,7 +75,7 @@ O identificador da barbearia demo é `10000000-0000-4000-8000-000000000001`. O c
 
 ## Limites atuais
 
-Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais, cadastro e login são reais. A migração e o seed ainda não foram executados num projeto Supabase, pois as credenciais do projeto não foram fornecidas. O agendamento carrega catálogo e disponibilidade reais quando Supabase e Edge Function estão configurados; sem isso, fica identificado como demonstrativo. Pagamento e painel administrativo virão nas próximas etapas.
+Sem URL e chave configuradas, o site público segue com dados demonstrativos e `/entrar` mostra como configurar o Supabase. Com credenciais, cadastro e login são reais. As migrações ainda precisam ser aplicadas ao projeto Supabase. O agendamento consulta disponibilidade real quando o Supabase está configurado; o checkout requer também credenciais do Mercado Pago. Sem esses pré-requisitos, o site não simula pagamentos aprovados. O painel administrativo virá numa etapa posterior.
 
 Imagens do site são carregadas do Unsplash e precisam de internet.
 
@@ -83,7 +84,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 1. **Concluída:** estrutura, identidade, navegação e experiência pública responsiva.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
 3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
-4. Integrar Mercado Pago por Edge Functions, validar webhooks e registrar idempotência e estados de pagamento.
+4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
 5. Construir painel administrativo, histórico, relatórios e testes das regras de domínio.
 6. Preparar implantação na Vercel e configuração por barbearia.
 
@@ -110,4 +111,15 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - A reserva é criada no servidor, vale pelo prazo `reservation_minutes` e valida o horário de novo. Uma restrição do PostgreSQL impede sobreposição mesmo em pedidos simultâneos.
 - Para haver horários, cadastre profissionais públicos em `barbershop_members`, associe-os em `barber_services` e configure `business_hours`. O seed atual não cria profissionais.
 - Com as credenciais, a migração, o catálogo e a Edge Function ativos, o formulário consulta a agenda e cria uma reserva temporária real. Sem esses pré-requisitos, ele permanece identificado como demonstrativo.
-- O pagamento ainda não está integrado; a tela informa que a reserva criada está pendente de pagamento.
+- A confirmação do pagamento depende de credenciais, publicação das funções e configuração do webhook no painel Mercado Pago.
+
+### Mercado Pago (Etapa 4)
+
+- A migração adiciona preferências de checkout, uma intenção de pagamento única por agendamento e funções transacionais para preparar o checkout e reconciliar eventos.
+- `create-payment-checkout` cria a preferência do Checkout Pro no servidor. O valor é obtido do agendamento no banco, e a validade da preferência acompanha a expiração da reserva.
+- `mercado-pago-webhook` valida `x-signature` por HMAC-SHA256, consulta o pagamento diretamente na API do Mercado Pago e compara referência, valor e moeda antes de registrar o status.
+- Somente o webhook validado pode marcar o agendamento como confirmado. A página de retorno do Checkout Pro não é tratada como prova de pagamento.
+- Configure os secrets `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET` e `PUBLIC_SITE_URL` em **Supabase → Edge Functions → Secrets**. Use primeiro credenciais de teste.
+- Publique com `npx supabase functions deploy create-payment-checkout` e `npx supabase functions deploy mercado-pago-webhook`. Configure a URL de webhook no painel do Mercado Pago para `https://SEU_PROJECT_REF.supabase.co/functions/v1/mercado-pago-webhook` e habilite eventos de pagamento.
+- Configure as URLs de retorno para o domínio do site usado em `PUBLIC_SITE_URL`. Nunca salve o Access Token ou o segredo do webhook em variáveis `VITE_` ou no Git.
+- Se um pagamento for aprovado depois que a reserva expirou, o sistema registra `payment_approved_after_hold` e não confirma um horário que pode ter sido ocupado; esse caso exige revisão operacional.

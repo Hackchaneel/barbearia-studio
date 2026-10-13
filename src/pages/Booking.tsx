@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, Scissors, UserRound } from 'lucide-react'
 import { barbers as demoBarbers, services as demoServices } from '../data/mock'
 import { supabase, supabaseConfigured } from '../lib/supabase'
@@ -76,9 +76,13 @@ export default function Booking() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [createdHold, setCreatedHold] = useState<CreatedHold | null>(null)
+  const [checkoutUrl, setCheckoutUrl] = useState('')
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const isLive = supabaseConfigured && Boolean(supabase)
   const dates = useMemo(() => Array.from({ length: 7 }, (_, index) => shopDate(index + 1)), [])
+  const location = useLocation()
 
   useEffect(() => {
     if (!supabase) return
@@ -214,13 +218,31 @@ export default function Booking() {
         customer_email: customerEmail || null,
       },
     })
-    setSubmitting(false)
     if (error || !data?.appointment) {
+      setSubmitting(false)
       setSubmitError(data?.error ?? 'Não foi possível reservar esse horário. Atualize a agenda e tente novamente.')
       return
     }
-    setCreatedHold(data.appointment as CreatedHold)
+    const hold = data.appointment as CreatedHold
+    setCreatedHold(hold)
+    await createCheckout(hold.appointment_id)
+    setSubmitting(false)
     setSent(true)
+  }
+
+  async function createCheckout(appointmentId: string) {
+    if (!supabase) return
+    setCheckoutLoading(true)
+    setCheckoutError(null)
+    const { data, error } = await supabase.functions.invoke('create-payment-checkout', {
+      body: { appointment_id: appointmentId },
+    })
+    setCheckoutLoading(false)
+    if (error || typeof data?.checkout_url !== 'string') {
+      setCheckoutError(data?.error ?? 'A reserva foi criada, mas não foi possível abrir o pagamento. Tente novamente em instantes.')
+      return
+    }
+    setCheckoutUrl(data.checkout_url)
   }
 
   if (sent) {
@@ -229,16 +251,21 @@ export default function Booking() {
       <span className="eyebrow">{isLive ? 'HORÁRIO RESERVADO' : 'MODO DEMONSTRATIVO'}</span>
       <h1>{isLive ? <>Seu horário está<br/><em>reservado.</em></> : <>Seu ritual está<br/><em>quase confirmado.</em></>}</h1>
       <p>{isLive && createdHold
-        ? `Reserva temporária criada. O horário fica retido até ${new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, hour: '2-digit', minute: '2-digit' }).format(new Date(createdHold.hold_expires_at))}. O pagamento ainda não está conectado.`
+        ? `Reserva temporária criada. O horário fica retido até ${new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, hour: '2-digit', minute: '2-digit' }).format(new Date(createdHold.hold_expires_at))}. A confirmação depende da notificação validada do Mercado Pago.`
         : 'Esta confirmação é demonstrativa. Nenhum agendamento real foi criado.'}</p>
       <div className="summary-card"><strong>{chosenService?.name}</strong><span>{date ? formatDate(date) : ''} · {time} · {chosenBarber || 'Profissional a definir'}</span><span>{chosenService ? formatPrice(chosenService.priceCents) : ''}</span></div>
+      {isLive && checkoutUrl && <a href={checkoutUrl} className="button button-gold">Ir para o pagamento</a>}
+      {isLive && !checkoutUrl && checkoutError && <><p className="demo-notice" role="alert">{checkoutError}</p><button type="button" className="button button-gold" disabled={checkoutLoading} onClick={()=>createdHold&&void createCheckout(createdHold.appointment_id)}>{checkoutLoading?'Preparando pagamento…':'Tentar pagamento novamente'}</button></>}
       <Link to="/" className="button button-gold">Voltar ao início</Link>
     </div></main>
   }
 
   return <main id="conteudo" className="inner-page booking-page"><div className="container">
     <div className="booking-heading"><span className="eyebrow">RESERVE SEU HORÁRIO</span><h1>Seu ritual começa <em>aqui.</em></h1><p>Escolha como quer cuidar de você.</p></div>
-    {isLive && <div className="demo-notice">Agendamento conectado ao Supabase. A reserva será temporária e ficará pendente de pagamento.</div>}
+    {location.search.includes('pagamento=retorno') && <p className="demo-notice" role="status">Retorno recebido. O servidor confirmará o pagamento; a volta do Mercado Pago não confirma o pagamento por si só.</p>}
+    {location.search.includes('pagamento=pendente') && <p className="demo-notice" role="status">O pagamento está pendente no Mercado Pago. Aguarde a atualização do servidor.</p>}
+    {location.search.includes('pagamento=falhou') && <p className="demo-notice" role="status">O pagamento não foi concluído. Uma nova reserva poderá ser necessária se o horário já tiver expirado.</p>}
+    {isLive && <div className="demo-notice">Agendamento conectado ao Supabase. A reserva será temporária e aguardará confirmação do pagamento.</div>}
     {catalogError && <div className="demo-notice" role="alert">{catalogError}</div>}
     <div className="booking-layout"><div className="booking-main">
       <div className="stepper">{['Serviço','Profissional','Data e hora','Seus dados'].map((label,index)=><div className={step===index+1?'active':step>index+1?'done':''} key={label}><span>{step>index+1?<Check size={14}/>:index+1}</span><small>{label}</small></div>)}</div>
