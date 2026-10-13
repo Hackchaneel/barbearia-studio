@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, Scissors, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, RefreshCw, Scissors, UserRound } from 'lucide-react'
 import { barbers as demoBarbers, services as demoServices } from '../data/mock'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import { BARBERSHOP_ID, SHOP_TIME_ZONE } from '../lib/shopConfig'
@@ -12,6 +12,15 @@ type BookingService = { id: string; name: string; description: string; priceCent
 type BookingBarber = { id: string; name: string; role: string; image?: string; serviceIds: string[] }
 type AvailableSlot = { barber_member_id: string; barber_name: string; starts_at: string; ends_at: string }
 type CreatedHold = { appointment_id: string; starts_at: string; ends_at: string; hold_expires_at: string }
+type PublicAppointmentStatus = {
+  service_name: string
+  starts_at: string
+  ends_at: string
+  appointment_state: string
+  payment_state: string | null
+  amount_cents: number
+  hold_expires_at: string | null
+}
 
 function shopDate(offset: number) {
   const parts = new Intl.DateTimeFormat('en', {
@@ -39,6 +48,13 @@ function formatSlotTime(value: string) {
 function formatDate(value: string) {
   const date = new Date(`${value}T12:00:00Z`)
   return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', dateStyle: 'full' }).format(date)
+}
+
+function formatAppointmentDate(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: SHOP_TIME_ZONE,
+    dateStyle: 'full',
+  }).format(new Date(value))
 }
 
 const DEMO_SERVICES: BookingService[] = demoServices.map((service) => ({
@@ -81,9 +97,78 @@ export default function Booking() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [returnedStatus, setReturnedStatus] = useState<PublicAppointmentStatus | null>(null)
+  const [returnedStatusError, setReturnedStatusError] = useState<string | null>(null)
+  const [returnedStatusLoading, setReturnedStatusLoading] = useState(false)
+  const [statusRefresh, setStatusRefresh] = useState(0)
   const isLive = supabaseConfigured && Boolean(supabase)
   const dates = useMemo(() => Array.from({ length: 7 }, (_, index) => shopDate(index + 1)), [])
   const location = useLocation()
+  const returnParams = new URLSearchParams(location.search)
+  const paymentReturn = returnParams.get('pagamento')
+  const returnedAppointmentId = returnParams.get('agendamento')
+  const showingPaymentReturn = ['retorno', 'pendente', 'falhou'].includes(paymentReturn ?? '')
+
+  useEffect(() => {
+    if (!showingPaymentReturn) {
+      setReturnedStatus(null)
+      setReturnedStatusError(null)
+      setReturnedStatusLoading(false)
+      return
+    }
+    if (!returnedAppointmentId) {
+      setReturnedStatus(null)
+      setReturnedStatusError('O link de retorno veio sem o identificador do agendamento.')
+      setReturnedStatusLoading(false)
+      return
+    }
+    if (!supabase || !isLive) {
+      setReturnedStatus(null)
+      setReturnedStatusError('A conexão com o Supabase não está configurada nesta versão do site.')
+      setReturnedStatusLoading(false)
+      return
+    }
+
+    let active = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let attempts = 0
+    setReturnedStatusLoading(true)
+    setReturnedStatusError(null)
+
+    async function refreshStatus() {
+      const { data, error } = await supabase!.rpc('get_public_appointment_status', {
+        _appointment_id: returnedAppointmentId,
+      })
+      if (!active) return
+      if (error) {
+        setReturnedStatusError('Não foi possível consultar o pagamento. Confira se a Etapa 8 foi aplicada no Supabase e tente atualizar.')
+        setReturnedStatusLoading(false)
+        return
+      }
+
+      const status = (Array.isArray(data) ? data[0] : data) as PublicAppointmentStatus | null
+      if (!status) {
+        setReturnedStatusError('Não encontramos esse agendamento. Confira o link recebido do Mercado Pago ou tente novamente.')
+        setReturnedStatusLoading(false)
+        return
+      }
+
+      setReturnedStatus(status)
+      setReturnedStatusError(null)
+      attempts += 1
+      const finished = status.payment_state === 'approved'
+        || ['confirmed', 'completed', 'cancelled', 'expired'].includes(status.appointment_state)
+        || (status.hold_expires_at !== null && new Date(status.hold_expires_at).getTime() <= Date.now())
+      if (!finished && attempts < 20) timer = setTimeout(() => void refreshStatus(), 3000)
+      else setReturnedStatusLoading(false)
+    }
+
+    void refreshStatus()
+    return () => {
+      active = false
+      if (timer) clearTimeout(timer)
+    }
+  }, [showingPaymentReturn, returnedAppointmentId, isLive, statusRefresh])
 
   useEffect(() => {
     if (!supabase) return
@@ -261,11 +346,49 @@ export default function Booking() {
     </div></main>
   }
 
+  if (showingPaymentReturn) {
+    const paid = returnedStatus?.payment_state === 'approved'
+    const failed = returnedStatus?.payment_state === 'rejected'
+      || returnedStatus?.payment_state === 'cancelled'
+      || returnedStatus?.appointment_state === 'expired'
+      || returnedStatus?.appointment_state === 'cancelled'
+    const heading = paid
+      ? <>Pagamento confirmado.<br/><em>Seu horário está reservado.</em></>
+      : failed
+        ? <>O pagamento não foi<br/><em>concluído.</em></>
+        : <>Estamos confirmando<br/><em>seu pagamento.</em></>
+    const message = returnedStatusError
+      ?? (paid
+        ? 'Pagamento aprovado pelo Mercado Pago e agendamento confirmado.'
+        : failed
+          ? 'Não identificamos um pagamento aprovado. Se o horário ainda estiver disponível, você pode fazer uma nova reserva.'
+          : returnedStatusLoading
+            ? 'Consultando o Mercado Pago. Esta tela atualiza automaticamente por alguns instantes.'
+            : 'O pagamento ainda está pendente. A confirmação será atualizada assim que o Mercado Pago notificar o sistema.')
+
+    return <main id="conteudo" className="inner-page"><div className="container success-state">
+      <div className="success-icon">{paid ? <Check/> : <Clock3/>}</div>
+      <span className="eyebrow">RETORNO DO PAGAMENTO</span>
+      <h1>{heading}</h1>
+      <p role={returnedStatusError ? 'alert' : 'status'}>{message}</p>
+      {returnedStatus && <div className="summary-card">
+        <strong>{returnedStatus.service_name}</strong>
+        <span>{formatAppointmentDate(returnedStatus.starts_at)} · {formatSlotTime(returnedStatus.starts_at)}</span>
+        <span>{formatPrice(returnedStatus.amount_cents)}</span>
+      </div>}
+      {returnedStatusLoading && <p>Atualizando status…</p>}
+      <div className="booking-controls" style={{ justifyContent: 'center', gap: 12 }}>
+        <button type="button" className="button button-outline" disabled={returnedStatusLoading || !returnedAppointmentId || !isLive} onClick={() => setStatusRefresh((value) => value + 1)}>
+          <RefreshCw size={15}/> Atualizar status
+        </button>
+        <Link to="/" className="button button-gold">Voltar ao início</Link>
+      </div>
+      {!returnedAppointmentId && <p className="demo-notice">O link de retorno veio sem o identificador do agendamento. Faça uma nova tentativa de reserva ou entre em contato com a barbearia.</p>}
+    </div></main>
+  }
+
   return <main id="conteudo" className="inner-page booking-page"><div className="container">
     <div className="booking-heading"><span className="eyebrow">RESERVE SEU HORÁRIO</span><h1>Seu ritual começa <em>aqui.</em></h1><p>Escolha como quer cuidar de você.</p></div>
-    {location.search.includes('pagamento=retorno') && <p className="demo-notice" role="status">Retorno recebido. O servidor confirmará o pagamento; a volta do Mercado Pago não confirma o pagamento por si só.</p>}
-    {location.search.includes('pagamento=pendente') && <p className="demo-notice" role="status">O pagamento está pendente no Mercado Pago. Aguarde a atualização do servidor.</p>}
-    {location.search.includes('pagamento=falhou') && <p className="demo-notice" role="status">O pagamento não foi concluído. Uma nova reserva poderá ser necessária se o horário já tiver expirado.</p>}
     {isLive && <div className="demo-notice">Agendamento conectado ao Supabase. A reserva será temporária e aguardará confirmação do pagamento.</div>}
     {catalogError && <div className="demo-notice" role="alert">{catalogError}</div>}
     <div className="booking-layout"><div className="booking-main">

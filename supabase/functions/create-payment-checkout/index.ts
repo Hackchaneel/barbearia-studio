@@ -91,9 +91,9 @@ Deno.serve(async (request) => {
     external_reference: appointmentId,
     notification_url: webhookUrl,
     back_urls: {
-      success: `${siteUrl}/agendar?pagamento=retorno`,
-      pending: `${siteUrl}/agendar?pagamento=pendente`,
-      failure: `${siteUrl}/agendar?pagamento=falhou`,
+      success: `${siteUrl}/agendar?pagamento=retorno&agendamento=${appointmentId}`,
+      pending: `${siteUrl}/agendar?pagamento=pendente&agendamento=${appointmentId}`,
+      failure: `${siteUrl}/agendar?pagamento=falhou&agendamento=${appointmentId}`,
     },
     auto_return: 'approved',
     expires: true,
