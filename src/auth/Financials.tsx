@@ -8,6 +8,8 @@ type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancell
 type Payment = {
   id: string
   appointment_id: string
+  provider: string
+  payment_method: string | null
   status: PaymentStatus
   amount_cents: number
   currency: string
@@ -18,6 +20,9 @@ type Appointment = { id: string; customer_name: string; service_id: string; star
 
 const statusLabels: Record<PaymentStatus, string> = {
   pending: 'Pendente', approved: 'Aprovado', rejected: 'Recusado', refunded: 'Reembolsado', cancelled: 'Cancelado',
+}
+const methodLabels: Record<string, string> = {
+  cash: 'Dinheiro', pix: 'Pix', debit_card: 'Cartão de débito', credit_card: 'Cartão de crédito', other: 'Outro',
 }
 
 function dateValue(date: Date) {
@@ -55,7 +60,7 @@ export default function Financials({ membership }: { membership: ShopMembership 
     setLoading(true)
     setError(null)
     const { data: paymentRows, error: paymentError } = await supabase.from('payments')
-      .select('id, appointment_id, status, amount_cents, currency, approved_at, created_at')
+      .select('id, appointment_id, provider, payment_method, status, amount_cents, currency, approved_at, created_at')
       .eq('barbershop_id', membership.barbershop_id)
       .gte('created_at', startOfDay(from))
       .lt('created_at', endOfDay(to))
@@ -139,7 +144,7 @@ export default function Financials({ membership }: { membership: ShopMembership 
         const appointment = appointments[payment.appointment_id]
         return <article className="admin-financial-row" key={payment.id}>
           <div className="admin-financial-date"><strong>{dateLabel(payment.created_at)}</strong><small>{timeLabel(payment.created_at)}</small></div>
-          <div className="admin-financial-main"><strong>{appointment?.customer_name ?? 'Atendimento'}</strong><small>{appointment ? `${services[appointment.service_id] ?? 'Serviço'} · ${dateLabel(appointment.starts_at)} às ${timeLabel(appointment.starts_at)}` : 'Dados do atendimento indisponíveis'}</small></div>
+          <div className="admin-financial-main"><strong>{appointment?.customer_name ?? 'Atendimento'}</strong><small>{appointment ? `${services[appointment.service_id] ?? 'Serviço'} · ${dateLabel(appointment.starts_at)} às ${timeLabel(appointment.starts_at)}` : 'Dados do atendimento indisponíveis'} · {payment.provider === 'in_person' ? methodLabels[payment.payment_method ?? ''] ?? 'Recebido no local' : 'Mercado Pago'}</small></div>
           <strong className="admin-financial-amount">{money(payment.amount_cents)}</strong>
           <span className={`admin-status status-${payment.status}`}>{statusLabels[payment.status]}</span>
         </article>

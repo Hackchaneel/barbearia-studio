@@ -18,6 +18,7 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `supabase/migrations/20261013060000_manage_barbershop_team.sql`: operações seguras para vincular e editar profissionais e substituir suas associações de serviços.
 - `supabase/migrations/20261013070000_manual_appointments.sql`: criação transacional de agendamentos presenciais/por telefone, validando permissões e disponibilidade no banco.
 - `supabase/migrations/20261013090000_reschedule_appointment.sql`: reagendamento seguro de atendimentos futuros confirmados, revalidando disponibilidade e registrando a alteração no histórico.
+- `supabase/migrations/20261013100000_record_in_person_payment.sql`: lançamento seguro e idempotente de recebimentos presenciais em dinheiro, Pix, débito ou crédito.
 - `supabase/seed.sql`: dados fictícios para desenvolvimento.
 - `supabase/functions/create-appointment-hold`: endpoint da Edge Function para reservar horários temporariamente.
 - `supabase/functions/create-payment-checkout` e `supabase/functions/mercado-pago-webhook`: Checkout Pro e confirmação de pagamentos no servidor.
@@ -145,9 +146,10 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - Proprietários e gerentes podem vincular uma conta Supabase com e-mail confirmado como barbeiro, editar o perfil, associar serviços e configurar a jornada individual. O profissional precisa criar a própria conta em `/entrar`; o painel não envia convite por e-mail.
 - Profissionais ativos e públicos aparecem na página inicial e no agendamento. Para haver horários, configure serviços e jornada semanal.
 - Proprietários, gerentes e barbeiros podem criar agendamentos presenciais ou recebidos por telefone em **Novo agendamento** no painel. O sistema confirma o horário escolhido e grava os dados do cliente e observações.
-- Agendamentos manuais usam o valor atual do serviço e ficam confirmados imediatamente. Pagamentos recebidos no local ainda não são lançados na tabela de pagamentos; os indicadores de recebimentos refletem apenas pagamentos aprovados pelo provedor online.
+- Agendamentos manuais usam o valor atual do serviço e ficam confirmados imediatamente. Proprietários e gerentes podem lançar o pagamento presencial e os indicadores de recebimento somam os pagamentos aprovados online e presenciais registrados.
 - A aba **Histórico** permite filtrar por período e status; proprietários e gerentes também filtram por profissional e serviço e veem os pagamentos aprovados relacionados aos atendimentos no período.
 - A aba **Relatórios** resume agendamentos, atendimentos concluídos, cancelamentos e profissionais/serviços mais agendados. Proprietários e gerentes veem pagamentos aprovados; todos podem exportar CSV conforme suas permissões.
+- Proprietários e gerentes podem lançar na agenda recebimentos presenciais para atendimentos confirmados ou concluídos sem uma cobrança já vinculada. Os lançamentos entram no financeiro e no histórico do atendimento; reservas com cobrança online não podem receber um segundo lançamento.
 - Proprietários e gerentes podem editar nome, descrição, endereço, telefone, e-mail, política de cancelamento e prazo de reserva em **Configurações**. O site público usa o nome, endereço, contato, descrição e horários cadastrados.
 - Para instalar a plataforma em outra barbearia, configure `VITE_BARBERSHOP_ID` com o UUID dela e `VITE_SHOP_TIME_ZONE` com o fuso IANA correspondente no `.env.local` e nas variáveis de build da Vercel.
 - O dashboard precisa das migrações de Supabase e de dados reais; o seed demo não cria membros nem agendamentos.

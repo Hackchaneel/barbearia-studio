@@ -28,6 +28,7 @@ type Appointment = {
   amount_cents: number
   hold_expires_at: string | null
 }
+type PaymentSummary = { status: string; provider: string; payment_method: string | null }
 type DashboardData = {
   appointments: Appointment[]
   services: Record<string, string>
@@ -35,6 +36,7 @@ type DashboardData = {
   shopName: string
   pendingPayments: number
   receivedTodayCents: number
+  paymentsByAppointment: Record<string, PaymentSummary>
 }
 
 const timeZone = SHOP_TIME_ZONE
@@ -145,20 +147,25 @@ export default function PrivatePanel() {
 
     let pendingPayments = 0
     let receivedTodayCents = 0
+    let paymentsByAppointment: Record<string, PaymentSummary> = {}
     if (canSeeFinancials) {
-      const [pendingResult, receivedResult] = await Promise.all([
+      const [pendingResult, receivedResult, appointmentPaymentResult] = await Promise.all([
         supabase.from('payments').select('appointment_id')
           .eq('barbershop_id', membership.barbershop_id).eq('status', 'pending'),
         supabase.from('payments').select('amount_cents')
           .eq('barbershop_id', membership.barbershop_id).eq('status', 'approved')
           .gte('approved_at', dayBoundary(today).toISOString()).lt('approved_at', tomorrow.toISOString()),
+        rows.length ? supabase.from('payments').select('appointment_id, status, provider, payment_method')
+          .eq('barbershop_id', membership.barbershop_id).in('appointment_id', rows.map((row) => row.id))
+          : Promise.resolve({ data: [], error: null }),
       ])
-      if (pendingResult.error || receivedResult.error) {
+      if (pendingResult.error || receivedResult.error || appointmentPaymentResult.error) {
         setError('A agenda carregou, mas não foi possível consultar os indicadores financeiros desta conta.')
         setData(null)
         setLoading(false)
         return
       }
+      paymentsByAppointment = Object.fromEntries((appointmentPaymentResult.data ?? []).map((payment) => [payment.appointment_id, payment]))
       const pendingAppointmentIds = [...new Set((pendingResult.data ?? []).map((payment) => payment.appointment_id))]
       if (pendingAppointmentIds.length) {
         const { data: pendingAppointments, error: pendingAppointmentsError } = await supabase.from('appointments')
@@ -185,6 +192,7 @@ export default function PrivatePanel() {
       shopName: shop?.name ?? 'Barbearia',
       pendingPayments,
       receivedTodayCents,
+      paymentsByAppointment,
     })
     setLoading(false)
   }, [membership, canSeeFinancials])
@@ -250,6 +258,41 @@ export default function PrivatePanel() {
     setUpdatingAppointmentId(null)
   }, [loadDashboard])
 
+  const recordInPersonPayment = useCallback(async (appointment: Appointment) => {
+    if (!supabase || !canSeeFinancials) return
+    const methods = [
+      ['1', 'cash', 'Dinheiro'], ['2', 'pix', 'Pix'], ['3', 'debit_card', 'Cartão de débito'],
+      ['4', 'credit_card', 'Cartão de crédito'], ['5', 'other', 'Outro'],
+    ] as const
+    const answer = window.prompt(`Registrar recebimento de ${money(appointment.amount_cents)}.\n\n1 — Dinheiro\n2 — Pix\n3 — Cartão de débito\n4 — Cartão de crédito\n5 — Outro\n\nDigite o número da forma recebida.`)
+    if (answer === null) return
+    const selected = methods.find(([key]) => key === answer.trim())
+    if (!selected) {
+      setError('Escolha uma opção de 1 a 5 para informar a forma de pagamento.')
+      return
+    }
+    if (!window.confirm(`Confirmar o recebimento de ${money(appointment.amount_cents)} via ${selected[2]}?`)) return
+
+    setUpdatingAppointmentId(appointment.id)
+    setError(null)
+    setNotice(null)
+    const { error: paymentError } = await supabase.rpc('record_in_person_payment', {
+      _appointment_id: appointment.id,
+      _payment_method: selected[1],
+    })
+    if (paymentError) {
+      setError(paymentError.code === '23505'
+        ? 'Já existe uma cobrança vinculada a este agendamento. O recebimento presencial não foi lançado.'
+        : paymentError.code === '42501'
+          ? 'Somente proprietário ou gerente pode lançar pagamentos presenciais.'
+          : 'Não foi possível registrar o recebimento. Confira se a Etapa 10 foi aplicada no Supabase.')
+    } else {
+      setNotice(`Recebimento de ${money(appointment.amount_cents)} via ${selected[2]} registrado no financeiro.`)
+      await loadDashboard()
+    }
+    setUpdatingAppointmentId(null)
+  }, [canSeeFinancials, loadDashboard])
+
   useEffect(() => {
     if (membership) void loadDashboard()
   }, [membership, loadDashboard])
@@ -310,10 +353,10 @@ export default function PrivatePanel() {
           <article><span>Cancelamentos hoje</span><strong>{cancelledToday}</strong><small><Activity size={14}/> atendimentos cancelados</small></article>
         </section>
         <section className="admin-card"><div className="admin-card-heading"><div><span className="eyebrow">AGENDA</span><h2>Próximos atendimentos</h2></div><button type="button" className="admin-text-button" onClick={() => setView('agenda')}>Ver semana <ArrowRightIcon/></button></div>
-          {upcoming.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento próximo para esta semana.</div> : <div className="admin-appointment-list">{upcoming.map((item) => <AppointmentRow key={item.id} appointment={item} data={data!} onStatusChange={updateAppointmentStatus} onReschedule={rescheduleAppointment} busy={updatingAppointmentId === item.id}/>)}</div>}
+          {upcoming.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento próximo para esta semana.</div> : <div className="admin-appointment-list">{upcoming.map((item) => <AppointmentRow key={item.id} appointment={item} data={data!} onStatusChange={updateAppointmentStatus} onReschedule={rescheduleAppointment} onRecordPayment={recordInPersonPayment} canRecordPayments={canSeeFinancials} busy={updatingAppointmentId === item.id}/>)}</div>}
         </section>
       </> : view === 'agenda' ? <section className="admin-card admin-agenda-card"><div className="admin-card-heading"><div><span className="eyebrow">PRÓXIMOS 7 DIAS</span><h2>Atendimentos da semana</h2></div><span className="admin-count">{appointments.length} registros</span></div>
-        {agendaGroups.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento encontrado neste período.</div> : agendaGroups.map(([day, items]) => <div className="admin-day-group" key={day}><h3>{formatDate(shopLocalDateTime(day, '12:00').toISOString(), { weekday: 'long', day: 'numeric', month: 'long' })}</h3><div className="admin-appointment-list">{items.map((item) => <AppointmentRow key={item.id} appointment={item} data={data!} onStatusChange={updateAppointmentStatus} onReschedule={rescheduleAppointment} busy={updatingAppointmentId === item.id}/>)}</div></div>)}
+        {agendaGroups.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento encontrado neste período.</div> : agendaGroups.map(([day, items]) => <div className="admin-day-group" key={day}><h3>{formatDate(shopLocalDateTime(day, '12:00').toISOString(), { weekday: 'long', day: 'numeric', month: 'long' })}</h3><div className="admin-appointment-list">{items.map((item) => <AppointmentRow key={item.id} appointment={item} data={data!} onStatusChange={updateAppointmentStatus} onReschedule={rescheduleAppointment} onRecordPayment={recordInPersonPayment} canRecordPayments={canSeeFinancials} busy={updatingAppointmentId === item.id}/>)}</div></div>)}
       </section> : view === 'history' ? <AppointmentHistory membership={membership!} canSeeFinancials={canSeeFinancials}/> : view === 'customers' ? <Customers membership={membership!}/> : view === 'finance' && canSeeFinancials ? <Financials membership={membership!}/> : view === 'reports' ? <Reports membership={membership!} canSeeFinancials={canSeeFinancials}/> : view === 'new' ? <ManualAppointment membership={membership!} onCreated={() => { setView('agenda'); void loadDashboard() }}/> : view === 'blocks' && canManageBlocks ? <BlockedTimes barbershopId={membership!.barbershop_id}/> : view === 'services' && canManageServices ? <ServicesManager barbershopId={membership!.barbershop_id}/> : view === 'team' && canManageTeam ? <TeamManager barbershopId={membership!.barbershop_id}/> : view === 'settings' && canSeeFinancials ? <BarbershopSettings barbershopId={membership!.barbershop_id} onSaved={() => void loadDashboard()}/> : null}
       <footer className="admin-footnote">Os dados exibidos vêm do Supabase e respeitam as permissões da sua função nesta barbearia.</footer>
     </section>
@@ -324,24 +367,40 @@ function ArrowRightIcon() {
   return <span aria-hidden="true">→</span>
 }
 
-function AppointmentRow({ appointment, data, onStatusChange, onReschedule, busy }: {
+function AppointmentRow({ appointment, data, onStatusChange, onReschedule, onRecordPayment, canRecordPayments, busy }: {
   appointment: Appointment
   data: DashboardData
   onStatusChange: (appointment: Appointment, status: 'cancelled' | 'completed') => void
   onReschedule: (appointment: Appointment) => void
+  onRecordPayment: (appointment: Appointment) => void
+  canRecordPayments: boolean
   busy: boolean
 }) {
   const canCancel = (appointment.status === 'pending' || appointment.status === 'confirmed') && new Date(appointment.starts_at).getTime() > Date.now()
   const canComplete = appointment.status === 'confirmed' && new Date(appointment.ends_at).getTime() <= Date.now()
   const canReschedule = appointment.status === 'confirmed' && new Date(appointment.starts_at).getTime() > Date.now()
+  const payment = data.paymentsByAppointment[appointment.id]
+  const canRecordPayment = canRecordPayments && !payment && (appointment.status === 'confirmed' || appointment.status === 'completed')
+  const paymentLabel = payment?.provider === 'in_person'
+    ? 'Pago presencial'
+    : payment?.status === 'approved'
+      ? 'Pago online'
+      : payment?.status === 'pending'
+        ? 'Pagamento pendente'
+        : payment?.status === 'rejected'
+          ? 'Pagamento recusado'
+          : payment?.status === 'refunded'
+            ? 'Pagamento reembolsado'
+            : payment?.status === 'cancelled' ? 'Cobrança cancelada' : null
   return <article className="admin-appointment-row">
     <div className="admin-appointment-time"><strong>{formatTime(appointment.starts_at)}</strong><small>{formatDate(appointment.starts_at)}</small></div>
     <div className="admin-appointment-main"><strong>{appointment.customer_name}</strong><small>{data.services[appointment.service_id] ?? 'Serviço'} · {data.barbers[appointment.barber_member_id] ?? 'Profissional'}</small></div>
     <div className="admin-appointment-contact">{appointment.customer_phone}</div>
     <div className="admin-appointment-price">{money(appointment.amount_cents)}</div>
-    <div className="admin-appointment-state"><span className={`admin-status status-${appointment.status}`}>{statusName[appointment.status]}</span><div className="admin-appointment-actions">
+    <div className="admin-appointment-state"><span className={`admin-status status-${appointment.status}`}>{statusName[appointment.status]}</span>{paymentLabel && <small className="admin-appointment-payment">{paymentLabel}</small>}<div className="admin-appointment-actions">
       {canComplete && <button type="button" onClick={() => onStatusChange(appointment, 'completed')} disabled={busy} title="Marcar como concluído"><CheckCircle2 size={13}/> Concluir</button>}
       {canReschedule && <button type="button" onClick={() => onReschedule(appointment)} disabled={busy} title="Alterar data e horário"><CalendarClock size={13}/> Alterar horário</button>}
+      {canRecordPayment && <button type="button" onClick={() => onRecordPayment(appointment)} disabled={busy} title="Registrar pagamento presencial"><Wallet size={13}/> Recebido no local</button>}
       {canCancel && <button type="button" onClick={() => onStatusChange(appointment, 'cancelled')} disabled={busy} title="Cancelar agendamento"><XCircle size={13}/> Cancelar</button>}
       {busy && <small>Salvando…</small>}
     </div></div>
