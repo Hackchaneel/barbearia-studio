@@ -9,9 +9,11 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `src/data/mock.ts`: catálogo demonstrativo usado quando o Supabase não está configurado; profissionais ainda aguardam a gestão da equipe.
 - `src/auth`: sessão, cadastro/login e proteção da área privada.
 - `src/auth/ServicesManager.tsx`: cadastro, edição e ativação de serviços para proprietários e gerentes.
+- `src/auth/TeamManager.tsx`: vínculo de profissionais, serviços atendidos e jornada semanal individual.
 - `src/lib/supabase.ts`: cliente Supabase com chave publicável no navegador.
 - `supabase/migrations`: esquema PostgreSQL multiempresa e políticas RLS versionados.
 - `supabase/migrations/20261013050000_manage_appointment_status.sql`: transições autorizadas de status e histórico de atendimentos, executadas no banco.
+- `supabase/migrations/20261013060000_manage_barbershop_team.sql`: operações seguras para vincular e editar profissionais e substituir suas associações de serviços.
 - `supabase/seed.sql`: dados fictícios para desenvolvimento.
 - `supabase/functions/create-appointment-hold`: endpoint da Edge Function para reservar horários temporariamente.
 - `supabase/functions/create-payment-checkout` e `supabase/functions/mercado-pago-webhook`: Checkout Pro e confirmação de pagamentos no servidor.
@@ -87,7 +89,7 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 2. **Implementada no código:** esquema multiempresa, migrações, RLS e autenticação. Aplicar ao projeto Supabase requer as credenciais do proprietário.
 3. **Implementada no código:** disponibilidade, bloqueios, reservas temporárias, prevenção transacional de conflitos e integração do formulário com RPC/Edge Function. Aplicar e publicar no Supabase e cadastrar profissionais continuam pendentes.
 4. **Integração escrita no código:** Checkout Pro, assinatura de webhook, consulta do pagamento no Mercado Pago, idempotência local e transições protegidas de pagamento. Configurar credenciais, publicar e validar com conta de teste continuam pendentes.
-5. **Em andamento:** dashboard, agenda semanal, bloqueios, ações de cancelar/concluir atendimentos e gestão de serviços. Faltam cadastro manual, gestão da equipe, histórico detalhado, relatórios e testes das regras de domínio.
+5. **Em andamento:** dashboard, agenda semanal, bloqueios, ações de cancelar/concluir atendimentos, gestão de serviços e equipe. Faltam cadastro manual, histórico detalhado, relatórios e testes das regras de domínio.
 6. Preparar implantação na Vercel e configuração por barbearia.
 
 ## Dependências principais
@@ -135,5 +137,7 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - A equipe pode cancelar atendimentos futuros e marcar como concluídos apenas atendimentos confirmados cujo horário final já passou. As mudanças são autorizadas no banco e registradas em `appointment_events`.
 - Cancelar um atendimento pago não processa reembolso automaticamente; o estorno precisa ser feito no Mercado Pago.
 - Proprietários e gerentes podem criar, editar, ativar e desativar serviços. O site público e o fluxo de agendamento leem o catálogo ativo do Supabase quando conectado.
-- Criar atendimentos manualmente e gerenciar a equipe ainda não estão disponíveis.
+- Proprietários e gerentes podem vincular uma conta Supabase com e-mail confirmado como barbeiro, editar o perfil, associar serviços e configurar a jornada individual. O profissional precisa criar a própria conta em `/entrar`; o painel não envia convite por e-mail.
+- Profissionais ativos e públicos aparecem na página inicial e no agendamento. Para haver horários, configure serviços e jornada semanal.
+- Criar atendimentos manualmente ainda não está disponível.
 - O dashboard precisa das migrações de Supabase e de dados reais; o seed demo não cria membros nem agendamentos.

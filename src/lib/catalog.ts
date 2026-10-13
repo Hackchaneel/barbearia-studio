@@ -1,8 +1,10 @@
 import { Scissors } from 'lucide-react'
-import { services as demoServices, type Service } from '../data/mock'
+import { barbers as demoBarbers, services as demoServices, type Service } from '../data/mock'
 import { supabase } from './supabase'
 
 export const DEMO_BARBERSHOP_ID = '10000000-0000-4000-8000-000000000001'
+
+export type PublicBarber = { id: string; name: string; role: string; image?: string }
 
 export async function loadPublicServices(): Promise<Service[]> {
   if (!supabase) return demoServices
@@ -19,5 +21,23 @@ export async function loadPublicServices(): Promise<Service[]> {
     price: service.price_cents / 100,
     duration: service.duration_minutes,
     icon: Scissors,
+  }))
+}
+
+export async function loadPublicBarbers(): Promise<PublicBarber[]> {
+  if (!supabase) return demoBarbers.map((barber, index) => ({ ...barber, id: `demo-${index}` }))
+  const { data, error } = await supabase.from('barbershop_members')
+    .select('id, display_name, bio, avatar_url')
+    .eq('barbershop_id', DEMO_BARBERSHOP_ID)
+    .eq('role', 'barber')
+    .eq('is_active', true)
+    .eq('is_public', true)
+    .order('display_name')
+  if (error) throw error
+  return (data ?? []).map((barber) => ({
+    id: barber.id,
+    name: barber.display_name,
+    role: barber.bio || 'Barbeiro',
+    image: barber.avatar_url ?? undefined,
   }))
 }
