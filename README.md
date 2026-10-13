@@ -89,3 +89,13 @@ Imagens do site são carregadas do Unsplash e precisam de internet.
 ## Dependências principais
 
 React, Vite, TypeScript, Tailwind CSS, React Router, Lucide e Supabase JS. Mercado Pago será integrado no servidor por Edge Functions; credenciais privadas não ficam no navegador.
+
+## Publicação automática sem `npm run dev`
+
+O projeto já está preparado para implantação na Vercel, incluindo fallback de rotas do React Router em `vercel.json`. Para configurar uma vez:
+
+1. Entre na Vercel usando sua conta GitHub e importe `Hackchaneel/barbearia-studio`.
+2. Confirme a raiz do projeto como a raiz do repositório. O Vite deve ser detectado automaticamente; os valores são `npm run build` para build e `dist` para saída.
+3. Clique em Deploy. A Vercel publica uma URL para o site.
+
+Depois disso, cada `git push` na branch principal dispara um novo build e publicação. Você não precisa rodar `npm run dev` para ver a versão online; use esse comando apenas quando quiser uma prévia local durante o desenvolvimento. Quando conectar o Supabase, cadastre também `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` nas variáveis de ambiente do projeto Vercel.
