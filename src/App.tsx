@@ -9,12 +9,14 @@ const SignIn = lazy(() => import('./auth/SignIn'))
 const Home = lazy(() => import('./pages/Home'))
 const Services = lazy(() => import('./pages/Services'))
 const Booking = lazy(() => import('./pages/Booking'))
+const AppointmentLookup = lazy(() => import('./pages/AppointmentLookup'))
 
 function App() {
   return <AuthProvider><BrowserRouter><Header/><Suspense fallback={<main id="conteudo" className="inner-page"><div className="container admin-loading">Carregando página…</div></main>}><Routes>
     <Route path="/" element={<Home/>}/>
     <Route path="/servicos" element={<Services/>}/>
     <Route path="/agendar" element={<Booking/>}/>
+    <Route path="/consulta" element={<AppointmentLookup/>}/>
     <Route path="/entrar" element={<SignIn/>}/>
     <Route path="/painel" element={<PrivatePanel/>}/>
     <Route path="*" element={<Home/>}/>

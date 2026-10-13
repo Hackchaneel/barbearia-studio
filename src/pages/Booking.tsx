@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, RefreshCw, Scissors, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, Copy, RefreshCw, Scissors, UserRound } from 'lucide-react'
 import { barbers as demoBarbers, services as demoServices } from '../data/mock'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import { BARBERSHOP_ID, SHOP_TIME_ZONE } from '../lib/shopConfig'
@@ -97,6 +97,8 @@ export default function Booking() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
+  const [codeCopyError, setCodeCopyError] = useState(false)
   const [returnedStatus, setReturnedStatus] = useState<PublicAppointmentStatus | null>(null)
   const [returnedStatusError, setReturnedStatusError] = useState<string | null>(null)
   const [returnedStatusLoading, setReturnedStatusLoading] = useState(false)
@@ -331,6 +333,17 @@ export default function Booking() {
     setCheckoutUrl(data.checkout_url)
   }
 
+  async function copyAppointmentCode(appointmentId: string) {
+    try {
+      await navigator.clipboard.writeText(appointmentId)
+      setCodeCopied(true)
+      setCodeCopyError(false)
+      window.setTimeout(() => setCodeCopied(false), 1800)
+    } catch {
+      setCodeCopyError(true)
+    }
+  }
+
   if (sent) {
     return <main id="conteudo" className="inner-page"><div className="container success-state">
       <div className="success-icon"><Check/></div>
@@ -340,6 +353,7 @@ export default function Booking() {
         ? `Reserva temporária criada. O horário fica retido até ${new Intl.DateTimeFormat('pt-BR', { timeZone: SHOP_TIME_ZONE, hour: '2-digit', minute: '2-digit' }).format(new Date(createdHold.hold_expires_at))}. A confirmação depende da notificação validada do Mercado Pago.`
         : 'Esta confirmação é demonstrativa. Nenhum agendamento real foi criado.'}</p>
       <div className="summary-card"><strong>{chosenService?.name}</strong><span>{date ? formatDate(date) : ''} · {time} · {chosenBarber || 'Profissional a definir'}</span><span>{chosenService ? formatPrice(chosenService.priceCents) : ''}</span></div>
+      {isLive && createdHold && <div className="booking-reference"><span>Código para consultar sua reserva</span><code>{createdHold.appointment_id}</code><button type="button" className="button button-outline" onClick={() => void copyAppointmentCode(createdHold.appointment_id)}><Copy size={14}/>{codeCopied ? 'Copiado' : 'Copiar código'}</button>{codeCopyError && <small role="alert">Não foi possível copiar. Selecione e copie o código manualmente.</small>}<Link to={`/consulta?codigo=${createdHold.appointment_id}`} className="text-link">Consultar agendamento</Link></div>}
       {isLive && checkoutUrl && <a href={checkoutUrl} className="button button-gold">Ir para o pagamento</a>}
       {isLive && !checkoutUrl && checkoutError && <><p className="demo-notice" role="alert">{checkoutError}</p><button type="button" className="button button-gold" disabled={checkoutLoading} onClick={()=>createdHold&&void createCheckout(createdHold.appointment_id)}>{checkoutLoading?'Preparando pagamento…':'Tentar pagamento novamente'}</button></>}
       <Link to="/" className="button button-gold">Voltar ao início</Link>
@@ -376,6 +390,7 @@ export default function Booking() {
         <span>{formatAppointmentDate(returnedStatus.starts_at)} · {formatSlotTime(returnedStatus.starts_at)}</span>
         <span>{formatPrice(returnedStatus.amount_cents)}</span>
       </div>}
+      {returnedAppointmentId && <div className="booking-reference"><span>Código para consultar sua reserva</span><code>{returnedAppointmentId}</code><Link to={`/consulta?codigo=${returnedAppointmentId}`} className="text-link">Consultar agendamento</Link></div>}
       {returnedStatusLoading && <p>Atualizando status…</p>}
       <div className="booking-controls" style={{ justifyContent: 'center', gap: 12 }}>
         <button type="button" className="button button-outline" disabled={returnedStatusLoading || !returnedAppointmentId || !isLive} onClick={() => setStatusRefresh((value) => value + 1)}>

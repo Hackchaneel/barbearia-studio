@@ -19,6 +19,7 @@ Plataforma comercial reutilizável para barbearias. A experiência pública da E
 - `supabase/migrations/20261013070000_manual_appointments.sql`: criação transacional de agendamentos presenciais/por telefone, validando permissões e disponibilidade no banco.
 - `supabase/migrations/20261013090000_reschedule_appointment.sql`: reagendamento seguro de atendimentos futuros confirmados, revalidando disponibilidade e registrando a alteração no histórico.
 - `supabase/migrations/20261013100000_record_in_person_payment.sql`: lançamento seguro e idempotente de recebimentos presenciais em dinheiro, Pix, débito ou crédito.
+- `supabase/migrations/20261013110000_customer_appointment_lookup.sql`: consulta pública de reserva mediante código e telefone, sem retornar dados de contato.
 - `supabase/seed.sql`: dados fictícios para desenvolvimento.
 - `supabase/functions/create-appointment-hold`: endpoint da Edge Function para reservar horários temporariamente.
 - `supabase/functions/create-payment-checkout` e `supabase/functions/mercado-pago-webhook`: Checkout Pro e confirmação de pagamentos no servidor.
@@ -120,6 +121,7 @@ Depois disso, cada `git push` na branch principal dispara um novo build e public
 - A reserva é criada no servidor, vale pelo prazo `reservation_minutes` e valida o horário de novo. Uma restrição do PostgreSQL impede sobreposição mesmo em pedidos simultâneos.
 - Para haver horários, cadastre profissionais públicos em `barbershop_members`, associe-os em `barber_services` e configure `business_hours`. O seed atual não cria profissionais.
 - Com as credenciais, a migração, o catálogo e a Edge Function ativos, o formulário consulta a agenda e cria uma reserva temporária real. Sem esses pré-requisitos, ele permanece identificado como demonstrativo.
+- A confirmação apresenta um código de consulta. Em `/consulta`, o cliente informa o código e o telefone do cadastro para ver horário, profissional, serviço e status do pagamento.
 - A confirmação do pagamento depende de credenciais, publicação das funções e configuração do webhook no painel Mercado Pago.
 
 ### Mercado Pago (Etapa 4)
