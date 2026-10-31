@@ -236,17 +236,21 @@ export default function Booking() {
     : (barbers.find((barber) => barber.id === barberId)?.name ?? '')
 
   useEffect(() => {
-    if (!isLive || !supabase || step !== 3 || !serviceId || !date || !barberId) {
+    // Preserve the chosen slot while the customer moves from date/time to their details.
+    // The selectedSlot used on submit is derived from availableSlots, so clearing it
+    // when step becomes 4 made the summary show a time that submit could not find.
+    if (step !== 3) return
+    if (!isLive || !supabase || !serviceId || !date || !barberId) {
       setAvailableSlots([])
       setSlotsError(null)
       setSlotsLoading(false)
+      setTime('')
       return
     }
 
     let active = true
     setSlotsLoading(true)
     setSlotsError(null)
-    setTime('')
     async function loadSlots() {
       const { data, error } = await supabase!.rpc('get_available_slots', {
         _barbershop_id: BARBERSHOP_ID,
@@ -261,12 +265,14 @@ export default function Booking() {
       } else {
         const slots = (data ?? []) as AvailableSlot[]
         const seenTimes = new Set<string>()
-        setAvailableSlots(slots.filter((slot) => {
+        const nextSlots = slots.filter((slot) => {
           const label = formatSlotTime(slot.starts_at)
           if (seenTimes.has(label)) return false
           seenTimes.add(label)
           return true
-        }))
+        })
+        setAvailableSlots(nextSlots)
+        setTime((currentTime) => currentTime && nextSlots.some((slot) => formatSlotTime(slot.starts_at) === currentTime) ? currentTime : '')
       }
       setSlotsLoading(false)
     }
