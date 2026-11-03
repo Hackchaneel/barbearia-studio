@@ -6,8 +6,7 @@ import { usePublicShop } from '../lib/publicShop'
 
 export function Brand() {
   const { shop } = usePublicShop()
-  const initials = shop.name.trim().slice(0, 1).toUpperCase() || 'N'
-  return <Link to="/" className="brand" aria-label={`${shop.name}, início`}><span className="brand-mark">{initials}<span>.</span></span><span className="brand-name">{shop.name.toUpperCase()}<small>BARBEARIA</small></span></Link>
+  return <Link to="/" className="brand" aria-label={`${shop.name}, início`}><img src="/el-patron-logo.jpeg" alt="Logo El Patrón Barbearia" /></Link>
 }
 
 export function Header() {

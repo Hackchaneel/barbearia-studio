@@ -139,7 +139,7 @@ export default function Reports({ membership, canSeeFinancials }: {
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `relatorio-noir-${from}-${to}.csv`
+    anchor.download = `relatorio-barbearia-${from}-${to}.csv`
     anchor.click()
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }

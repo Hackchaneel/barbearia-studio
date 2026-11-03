@@ -16,13 +16,13 @@ export type ShopInfo = {
 type BusinessHour = { weekday: number; is_closed: boolean; opens_at: string | null; closes_at: string | null }
 
 const fallback: ShopInfo = {
-  name: 'Noir Barbearia',
-  description: 'Barbearia contemporânea em Pinheiros.',
-  phone: null,
+  name: 'El Patrón Barbearia',
+  description: 'Barbearia no Riacho Fundo I, ao lado do Frango do Pote.',
+  phone: '(61) 9938-2259',
   email: null,
-  address_line: 'Rua dos Pinheiros, 412',
-  city: 'São Paulo',
-  state: 'SP',
+  address_line: 'Ao lado do Frango do Pote',
+  city: 'Riacho Fundo I',
+  state: 'DF',
   postal_code: null,
   cancellation_policy: '',
 }

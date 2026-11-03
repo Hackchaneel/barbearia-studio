@@ -313,7 +313,7 @@ export default function PrivatePanel() {
 
   return <main id="conteudo" className="admin-shell">
     <aside className="admin-sidebar">
-      <Link to="/" className="admin-brand"><span className="brand-mark">{shopName.trim().slice(0, 1).toUpperCase() || 'B'}<span>.</span></span><span>{shopName}<small>PAINEL DE GESTÃO</small></span></Link>
+      <Link to="/" className="admin-brand"><img src="/el-patron-logo.jpeg" alt=""/><span>{shopName}<small>PAINEL DE GESTÃO</small></span></Link>
       <div className="admin-shop-label">BARBEARIA</div>
       {memberships.length > 1 ? <label className="admin-shop-select"><span className="sr-only">Selecionar vínculo da equipe</span><select value={membership?.id ?? ''} onChange={(event) => setSelectedMembershipId(event.target.value)}>{memberships.map((item) => <option key={item.id} value={item.id}>{item.display_name || roleName[item.role]} · {roleName[item.role]}</option>)}</select><ChevronDown size={14}/></label> : <div className="admin-shop-name">{shopName}</div>}
       <nav className="admin-nav" aria-label="Menu do painel">
