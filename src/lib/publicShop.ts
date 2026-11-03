@@ -20,8 +20,8 @@ const fallback: ShopInfo = {
   description: 'Barbearia no Riacho Fundo I, ao lado do Frango do Pote.',
   phone: '(61) 9938-2259',
   email: null,
-  address_line: 'Ao lado do Frango do Pote',
-  city: 'Riacho Fundo I',
+  address_line: 'Riacho Fundo I, ao lado do Frango do Pote',
+  city: 'Brasília',
   state: 'DF',
   postal_code: null,
   cancellation_policy: '',
@@ -61,7 +61,16 @@ export function usePublicShop() {
         .eq('barbershop_id', BARBERSHOP_ID).is('barber_member_id', null).order('weekday'),
     ]).then(([shopResult, hoursResult]) => {
       if (!active) return
-      if (!shopResult.error && shopResult.data) setShop(shopResult.data as ShopInfo)
+      if (!shopResult.error && shopResult.data) setShop({
+        ...shopResult.data,
+        // A identidade desta instalação prevalece sobre dados antigos do cadastro remoto.
+        name: fallback.name,
+        description: fallback.description,
+        phone: fallback.phone,
+        address_line: fallback.address_line,
+        city: fallback.city,
+        state: fallback.state,
+      } as ShopInfo)
       if (!hoursResult.error && hoursResult.data?.length) setHours(formatSchedule(hoursResult.data as BusinessHour[]))
     }).catch(() => {})
     return () => { active = false }
