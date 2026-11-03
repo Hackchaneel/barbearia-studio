@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Check, Clock3, LoaderCircle, Plus, RefreshCw, UserRound } from 'lucide-react'
+import { Check, Clock3, LoaderCircle, Plus, RefreshCw, Trash2, UserRound } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 type Barber = { id: string; display_name: string; bio: string; avatar_url: string | null; is_public: boolean; is_active: boolean }
@@ -29,6 +29,7 @@ export default function TeamManager({ barbershopId, isOwner }: { barbershopId: s
   const [savingServices, setSavingServices] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [removingBarberId, setRemovingBarberId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -210,6 +211,35 @@ export default function TeamManager({ barbershopId, isOwner }: { barbershopId: s
     setSavingProfile(false)
   }
 
+  const removeBarber = async (barber: Barber) => {
+    if (!supabase) return
+    const confirmed = window.confirm(
+      `Remover ${barber.display_name} da equipe? A pessoa perderá o acesso ao painel e não poderá receber novos agendamentos. O histórico será mantido.`,
+    )
+    if (!confirmed) return
+
+    setRemovingBarberId(barber.id)
+    setError(null)
+    setNotice(null)
+    const { error: removeError } = await supabase.rpc('update_barbershop_barber', {
+      _barbershop_id: barbershopId,
+      _barber_member_id: barber.id,
+      _display_name: barber.display_name,
+      _bio: barber.bio ?? '',
+      _avatar_url: barber.avatar_url ?? '',
+      _is_public: false,
+      _is_active: false,
+    })
+    if (removeError) {
+      setError('Não foi possível remover o profissional. Confira se você é proprietário ou gerente da barbearia.')
+    } else {
+      setSelectedId('')
+      setNotice(`${barber.display_name} foi removido da equipe. O histórico de atendimentos foi preservado.`)
+      await loadTeam()
+    }
+    setRemovingBarberId(null)
+  }
+
   const saveServices = async () => {
     if (!supabase || !selectedBarber) return
     setSavingServices(true)
@@ -298,7 +328,7 @@ export default function TeamManager({ barbershopId, isOwner }: { barbershopId: s
       {notice && <div className="admin-block-notice" role="status">{notice}</div>}
       {detailsLoading ? <div className="admin-loading">Carregando configuração do profissional…</div> : <>
         <section className="admin-card">
-          <div className="admin-card-heading"><div><span className="eyebrow">PERFIL</span><h2>{selectedBarber.display_name}</h2></div></div>
+          <div className="admin-card-heading"><div><span className="eyebrow">PERFIL</span><h2>{selectedBarber.display_name}</h2></div>{selectedBarber.is_active && <button type="button" className="admin-danger-button" onClick={() => void removeBarber(selectedBarber)} disabled={removingBarberId === selectedBarber.id}>{removingBarberId === selectedBarber.id ? <LoaderCircle className="spin" size={14}/> : <Trash2 size={14}/>} Remover funcionário</button>}</div>
           <form className="admin-team-profile-form" onSubmit={(event) => void saveProfile(event)}>
             <label>Nome<input required maxLength={80} value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
             <label>Especialidade / apresentação<input maxLength={160} value={bio} onChange={(event) => setBio(event.target.value)} /></label>
