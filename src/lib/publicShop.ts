@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BARBERSHOP_ID } from './shopConfig'
+import { BARBERSHOP_BRAND } from './brand'
 import { supabase } from './supabase'
 
 export type ShopInfo = {
@@ -16,13 +17,8 @@ export type ShopInfo = {
 type BusinessHour = { weekday: number; is_closed: boolean; opens_at: string | null; closes_at: string | null }
 
 const fallback: ShopInfo = {
-  name: 'El Patrón Barbearia',
-  description: 'Barbearia no Riacho Fundo I, ao lado do Frango do Pote.',
-  phone: '(61) 9938-2259',
+  ...BARBERSHOP_BRAND,
   email: null,
-  address_line: 'Riacho Fundo I, ao lado do Frango do Pote',
-  city: 'Brasília',
-  state: 'DF',
   postal_code: null,
   cancellation_policy: '',
 }
@@ -64,12 +60,7 @@ export function usePublicShop() {
       if (!shopResult.error && shopResult.data) setShop({
         ...shopResult.data,
         // A identidade desta instalação prevalece sobre dados antigos do cadastro remoto.
-        name: fallback.name,
-        description: fallback.description,
-        phone: fallback.phone,
-        address_line: fallback.address_line,
-        city: fallback.city,
-        state: fallback.state,
+        ...BARBERSHOP_BRAND,
       } as ShopInfo)
       if (!hoursResult.error && hoursResult.data?.length) setHours(formatSchedule(hoursResult.data as BusinessHour[]))
     }).catch(() => {})

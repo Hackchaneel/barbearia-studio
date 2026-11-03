@@ -1,4 +1,4 @@
--- Initial multi-tenant schema for Noir Barbearia.
+-- Initial multi-tenant schema for the barbershop scheduling system.
 -- Roles for staff live in barbershop_members, never in user-editable auth metadata.
 create extension if not exists btree_gist with schema extensions;
 

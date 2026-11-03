@@ -13,7 +13,8 @@ import BarbershopSettings from './BarbershopSettings'
 import Customers from './Customers'
 import Financials from './Financials'
 import AgendaManager from './AgendaManager'
-import { SHOP_TIME_ZONE, nextShopDay, shiftShopDay, shopDayStart, shopLocalDateTime } from '../lib/shopConfig'
+import { BARBERSHOP_ID, SHOP_TIME_ZONE, nextShopDay, shiftShopDay, shopDayStart, shopLocalDateTime } from '../lib/shopConfig'
+import { BARBERSHOP_BRAND } from '../lib/brand'
 
 type PanelView = 'dashboard' | 'agenda' | 'history' | 'customers' | 'finance' | 'reports' | 'new' | 'blocks' | 'services' | 'team' | 'settings'
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'expired'
@@ -91,7 +92,9 @@ export default function PrivatePanel() {
   const canManageBlocks = canSeeFinancials
   const canManageServices = canSeeFinancials
   const canManageTeam = canSeeFinancials
-  const shopName = data?.shopName || 'Barbearia'
+  const shopName = membership?.barbershop_id === BARBERSHOP_ID
+    ? BARBERSHOP_BRAND.name
+    : data?.shopName || 'Barbearia'
 
   useEffect(() => {
     if (memberships.length === 0) {

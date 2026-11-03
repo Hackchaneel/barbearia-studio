@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Check, RefreshCw, Save } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { BARBERSHOP_ID } from '../lib/shopConfig'
+import { BARBERSHOP_BRAND } from '../lib/brand'
 
 type Settings = {
   name: string
@@ -35,8 +37,11 @@ export default function BarbershopSettings({ barbershopId, onSaved }: { barbersh
       .eq('id', barbershopId).maybeSingle()
     if (loadError || !data) setError('Não foi possível carregar as configurações da barbearia.')
     else setSettings({
-      name: data.name ?? '', description: data.description ?? '', phone: data.phone ?? '', email: data.email ?? '',
-      address_line: data.address_line ?? '', city: data.city ?? '', state: data.state ?? '', postal_code: data.postal_code ?? '',
+      ...(barbershopId === BARBERSHOP_ID ? BARBERSHOP_BRAND : {
+        name: data.name ?? '', description: data.description ?? '', phone: data.phone ?? '',
+        address_line: data.address_line ?? '', city: data.city ?? '', state: data.state ?? '',
+      }),
+      email: data.email ?? '', postal_code: data.postal_code ?? '',
       cancellation_policy: data.cancellation_policy ?? '', reservation_minutes: data.reservation_minutes ?? 10,
     })
     setLoading(false)

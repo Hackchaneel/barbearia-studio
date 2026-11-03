@@ -2,13 +2,13 @@
 insert into public.barbershops (id, name, slug, description, phone, address_line, city, state, timezone)
 values (
   '10000000-0000-4000-8000-000000000001',
-  'Noir Barbearia',
-  'noir-pinheiros',
-  'Barbearia contemporânea em Pinheiros.',
-  '(11) 3333-4444',
-  'Rua dos Pinheiros, 412',
-  'São Paulo',
-  'SP',
+  'Barbearia EL PATRÓN',
+  'el-patron-riacho-fundo',
+  'Barbearia no Riacho Fundo I, ao lado do Frango do Pote.',
+  '(61) 9938-2259',
+  'Riacho Fundo I, ao lado do Frango do Pote',
+  'Brasília',
+  'DF',
   'America/Sao_Paulo'
 )
 on conflict (id) do nothing;

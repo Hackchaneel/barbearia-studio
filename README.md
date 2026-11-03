@@ -1,4 +1,4 @@
-# Noir — Barbearia contemporânea
+# Barbearia EL PATRÓN — Agendamento e gestão
 
 Plataforma multiempresa para barbearias, com site público, reservas, autenticação e painel operacional. O código está publicado na Vercel; as migrations e Edge Functions estão aplicadas ao projeto Supabase conectado. A ativação de pagamentos reais ainda depende das credenciais do Mercado Pago.
 
@@ -51,7 +51,7 @@ git push
 A base da etapa 2 está incluída:
 
 - `supabase/migrations/20261013010000_initial_multi_tenant_schema.sql`: modelo multiempresa, relacionamentos, índices, estados de agendamento/pagamento, restrição contra horários sobrepostos, criação de perfil após cadastro e políticas RLS.
-- `supabase/seed.sql`: catálogo Noir fictício e horários. Não cria usuários, profissionais, agendamentos nem pagamentos.
+- `supabase/seed.sql`: catálogo de demonstração e horários. Não cria usuários, profissionais, agendamentos nem pagamentos.
 - `/entrar`: cadastro e login por Supabase Auth quando há credenciais configuradas.
 - `/painel`: verifica sessão e vínculo ativo de equipe e oferece agenda, clientes, histórico, serviços, equipe, financeiro, relatórios e configurações conforme a função.
 
@@ -75,7 +75,7 @@ A base da etapa 2 está incluída:
    select shop.id, auth_user.id, 'owner', coalesce(auth_user.raw_user_meta_data ->> 'full_name', 'Proprietário')
    from public.barbershops shop
    cross join auth.users auth_user
-   where shop.slug = 'noir-pinheiros'
+   where shop.slug = 'el-patron-riacho-fundo'
      and auth_user.email = 'SEU_EMAIL'
    on conflict (barbershop_id, user_id) do update
      set role = 'owner', is_active = true;
