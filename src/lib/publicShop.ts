@@ -48,6 +48,10 @@ export function usePublicShop() {
   const [shop, setShop] = useState<ShopInfo>(fallback)
   const [hours, setHours] = useState<string[]>([])
   useEffect(() => {
+    document.title = `${shop.name} — Agendamento online`
+    document.querySelector('meta[name="description"]')?.setAttribute('content', shop.description)
+  }, [shop.name, shop.description])
+  useEffect(() => {
     if (!supabase) return
     let active = true
     void Promise.all([
@@ -57,11 +61,7 @@ export function usePublicShop() {
         .eq('barbershop_id', BARBERSHOP_ID).is('barber_member_id', null).order('weekday'),
     ]).then(([shopResult, hoursResult]) => {
       if (!active) return
-      if (!shopResult.error && shopResult.data) setShop({
-        ...shopResult.data,
-        // A identidade desta instalação prevalece sobre dados antigos do cadastro remoto.
-        ...BARBERSHOP_BRAND,
-      } as ShopInfo)
+      if (!shopResult.error && shopResult.data) setShop(shopResult.data as ShopInfo)
       if (!hoursResult.error && hoursResult.data?.length) setHours(formatSchedule(hoursResult.data as BusinessHour[]))
     }).catch(() => {})
     return () => { active = false }

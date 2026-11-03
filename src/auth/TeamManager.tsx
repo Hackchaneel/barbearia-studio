@@ -20,7 +20,7 @@ const defaultSchedule = (): ScheduleDay[] => week.map((_, weekday) => ({
 
 function hhmm(value: string | null) { return value?.slice(0, 5) ?? '' }
 
-export default function TeamManager({ barbershopId }: { barbershopId: string }) {
+export default function TeamManager({ barbershopId, isOwner }: { barbershopId: string; isOwner: boolean }) {
   const [barbers, setBarbers] = useState<Barber[]>([])
   const [services, setServices] = useState<ServiceOption[]>([])
   const [selectedId, setSelectedId] = useState('')
@@ -35,6 +35,11 @@ export default function TeamManager({ barbershopId }: { barbershopId: string }) 
   const [email, setEmail] = useState('')
   const [newName, setNewName] = useState('')
   const [newBio, setNewBio] = useState('')
+  const [managerEmail, setManagerEmail] = useState('')
+  const [managerName, setManagerName] = useState('')
+  const [creatingManager, setCreatingManager] = useState(false)
+  const [managerError, setManagerError] = useState<string | null>(null)
+  const [managerNotice, setManagerNotice] = useState<string | null>(null)
 
   const selectedBarber = barbers.find((barber) => barber.id === selectedId) ?? null
   const activeServices = useMemo(() => services.filter((service) => service.is_active), [services])
@@ -73,6 +78,33 @@ export default function TeamManager({ barbershopId }: { barbershopId: string }) 
   }, [barbershopId])
 
   useEffect(() => { void loadTeam() }, [loadTeam])
+
+  const addManager = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!supabase || !isOwner) return
+    setCreatingManager(true)
+    setManagerError(null)
+    setManagerNotice(null)
+    const { error: createError } = await supabase.rpc('add_barbershop_manager', {
+      _barbershop_id: barbershopId,
+      _email: managerEmail.trim(),
+      _display_name: managerName.trim(),
+    })
+    if (createError) {
+      setManagerError(createError.code === 'P0002'
+        ? 'Essa pessoa precisa criar a conta em /entrar e confirmar o e-mail antes de ser cadastrada como gerente.'
+        : createError.code === '42501'
+          ? 'Somente o proprietário pode cadastrar gerentes.'
+          : createError.code === '23505'
+            ? 'A conta informada já é proprietária desta barbearia.'
+            : 'Não foi possível cadastrar o gerente. Confira o e-mail e tente novamente.')
+    } else {
+      setManagerNotice('Gerente cadastrado. Ele já pode entrar com a conta confirmada e gerenciar a equipe, os serviços e os dados da barbearia.')
+      setManagerEmail('')
+      setManagerName('')
+    }
+    setCreatingManager(false)
+  }
 
   useEffect(() => {
     if (!selectedBarber || !supabase) {
@@ -229,6 +261,18 @@ export default function TeamManager({ barbershopId }: { barbershopId: string }) 
   }
 
   return <div className="admin-team-layout">
+    {isOwner && <section className="admin-card admin-team-add">
+      <div className="admin-card-heading"><div><span className="eyebrow">ACESSO DO PROPRIETÁRIO</span><h2>Cadastrar gerente</h2></div></div>
+      <div className="admin-team-onboarding">Somente você, como proprietário, pode conceder esse acesso. A pessoa precisa criar a conta em <strong>/entrar</strong> e confirmar o e-mail primeiro. Não compartilhe sua senha.</div>
+      <form className="admin-team-add-form" onSubmit={(event) => void addManager(event)}>
+        <label>E-mail da conta confirmada<input required type="email" value={managerEmail} onChange={(event) => setManagerEmail(event.target.value)} placeholder="gerente@email.com" /></label>
+        <label>Nome do gerente<input required maxLength={80} value={managerName} onChange={(event) => setManagerName(event.target.value)} placeholder="Nome completo" /></label>
+        <button className="button button-gold" type="submit" disabled={creatingManager}>{creatingManager ? <LoaderCircle className="spin" size={15}/> : <Plus size={15}/>} Cadastrar como gerente</button>
+      </form>
+      {managerError && <div className="admin-alert" role="alert">{managerError}</div>}
+      {managerNotice && <div className="admin-block-notice" role="status">{managerNotice}</div>}
+    </section>}
+
     <section className="admin-card admin-team-add">
       <div className="admin-card-heading"><div><span className="eyebrow">EQUIPE</span><h2>Adicionar profissional</h2></div></div>
       <div className="admin-team-onboarding">O profissional precisa criar a própria conta em <strong>/entrar</strong> e confirmar o e-mail antes de ser vinculado. Este painel não envia convite por e-mail.</div>

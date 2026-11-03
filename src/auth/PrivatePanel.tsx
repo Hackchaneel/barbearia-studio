@@ -13,8 +13,7 @@ import BarbershopSettings from './BarbershopSettings'
 import Customers from './Customers'
 import Financials from './Financials'
 import AgendaManager from './AgendaManager'
-import { BARBERSHOP_ID, SHOP_TIME_ZONE, nextShopDay, shiftShopDay, shopDayStart, shopLocalDateTime } from '../lib/shopConfig'
-import { BARBERSHOP_BRAND } from '../lib/brand'
+import { SHOP_TIME_ZONE, nextShopDay, shiftShopDay, shopDayStart, shopLocalDateTime } from '../lib/shopConfig'
 
 type PanelView = 'dashboard' | 'agenda' | 'history' | 'customers' | 'finance' | 'reports' | 'new' | 'blocks' | 'services' | 'team' | 'settings'
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'expired'
@@ -92,9 +91,7 @@ export default function PrivatePanel() {
   const canManageBlocks = canSeeFinancials
   const canManageServices = canSeeFinancials
   const canManageTeam = canSeeFinancials
-  const shopName = membership?.barbershop_id === BARBERSHOP_ID
-    ? BARBERSHOP_BRAND.name
-    : data?.shopName || 'Barbearia'
+  const shopName = data?.shopName || 'Barbearia'
 
   useEffect(() => {
     if (memberships.length === 0) {
@@ -350,7 +347,7 @@ export default function PrivatePanel() {
         <section className="admin-card"><div className="admin-card-heading"><div><span className="eyebrow">AGENDA</span><h2>Próximos atendimentos</h2></div><button type="button" className="admin-text-button" onClick={() => setView('agenda')}>Ver semana <ArrowRightIcon/></button></div>
           {upcoming.length === 0 ? <div className="admin-empty-inline">Nenhum atendimento próximo para esta semana.</div> : <div className="admin-appointment-list">{upcoming.map((item) => <AppointmentRow key={item.id} appointment={item} data={data!} onStatusChange={updateAppointmentStatus} onReschedule={rescheduleAppointment} onRecordPayment={recordInPersonPayment} canRecordPayments={canSeeFinancials} busy={updatingAppointmentId === item.id}/>)}</div>}
         </section>
-      </> : view === 'agenda' ? <AgendaManager membership={membership!} canRecordPayments={canSeeFinancials} onStatusChange={updateAppointmentStatus} onReschedule={rescheduleAppointment} onRecordPayment={recordInPersonPayment}/> : view === 'history' ? <AppointmentHistory membership={membership!} canSeeFinancials={canSeeFinancials}/> : view === 'customers' ? <Customers membership={membership!}/> : view === 'finance' && canSeeFinancials ? <Financials membership={membership!}/> : view === 'reports' ? <Reports membership={membership!} canSeeFinancials={canSeeFinancials}/> : view === 'new' ? <ManualAppointment membership={membership!} onCreated={() => { setView('agenda'); void loadDashboard() }}/> : view === 'blocks' && canManageBlocks ? <BlockedTimes barbershopId={membership!.barbershop_id}/> : view === 'services' && canManageServices ? <ServicesManager barbershopId={membership!.barbershop_id}/> : view === 'team' && canManageTeam ? <TeamManager barbershopId={membership!.barbershop_id}/> : view === 'settings' && canSeeFinancials ? <BarbershopSettings barbershopId={membership!.barbershop_id} onSaved={() => void loadDashboard()}/> : null}
+      </> : view === 'agenda' ? <AgendaManager membership={membership!} canRecordPayments={canSeeFinancials} onStatusChange={updateAppointmentStatus} onReschedule={rescheduleAppointment} onRecordPayment={recordInPersonPayment}/> : view === 'history' ? <AppointmentHistory membership={membership!} canSeeFinancials={canSeeFinancials}/> : view === 'customers' ? <Customers membership={membership!}/> : view === 'finance' && canSeeFinancials ? <Financials membership={membership!}/> : view === 'reports' ? <Reports membership={membership!} canSeeFinancials={canSeeFinancials}/> : view === 'new' ? <ManualAppointment membership={membership!} onCreated={() => { setView('agenda'); void loadDashboard() }}/> : view === 'blocks' && canManageBlocks ? <BlockedTimes barbershopId={membership!.barbershop_id}/> : view === 'services' && canManageServices ? <ServicesManager barbershopId={membership!.barbershop_id}/> : view === 'team' && canManageTeam ? <TeamManager barbershopId={membership!.barbershop_id} isOwner={membership?.role === 'owner'}/> : view === 'settings' && canSeeFinancials ? <BarbershopSettings barbershopId={membership!.barbershop_id} onSaved={() => void loadDashboard()}/> : null}
       <footer className="admin-footnote">Os dados exibidos vêm do Supabase e respeitam as permissões da sua função nesta barbearia.</footer>
     </section>
   </main>
